@@ -19,6 +19,7 @@ import { registrationsRoutes } from './modules/registrations/registrations.route
 import { reviewsRoutes } from './modules/reviews/reviews.routes.js';
 
 import authRoutes from './routes/auth.routes.js';
+import devRoutes from './routes/dev.routes.js';
 import adminRoutes from './modules/admin/admin.routes.js';
 import postRoutes from './routes/post.routes.js';
 import userRoutes from './routes/user.routes.js';
@@ -76,6 +77,7 @@ fastify.register(registrationsRoutes, { prefix: '/api/v1/events' });
 fastify.register(reviewsRoutes, { prefix: '/api/v1/events' });
 
 fastify.register(authRoutes, { prefix: '/api/v1' });
+fastify.register(devRoutes, { prefix: '/api/v1' });
 fastify.register(adminRoutes, { prefix: '/api/v1' });
 
 fastify.register(postRoutes, { prefix: '/api/posts' });

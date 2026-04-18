@@ -115,142 +115,135 @@ export const userStep1 = async (request: FastifyRequest, reply: FastifyReply) =>
   const { fullName, email, password, phone } = request.body as any;
 
   if (await User.exists({ email })) return reply.status(400).send({ success: false, error: { code: 'EMAIL_ALREADY_EXISTS', message: 'Email exists' }});
-  if (await User.exists({ phone })) return reply.status(400).send({ success: false, error: { code: 'PHONE_ALREADY_EXISTS', message: 'Phone exists' }});
 
-  const passwordHash = await hashPassword(password);
-  
-  const user = await User.create({
-    fullName, email, passwordHash, phone, role: 'professional', status: 'onboarding', signupStep: 1
-  });
-
+  // Send OTP before saving anything to DB
   await OtpService.sendEmailOtp(email, 'email_verify');
-  await OtpService.sendPhoneOtp(phone, 'phone_verify');
 
-  await AuditLog.create({ userId: user._id, action: 'signup_step_1', ip: request.ip });
-
-  const signupSessionToken = generateToken({ id: user._id, accountType: 'user' });
-  return reply.send({ success: true, signupSessionToken, message: 'Step 1 complete' });
+  // Store signup data in JWT — user is NOT saved to DB yet
+  const passwordHash = await hashPassword(password);
+  const signupSessionToken = generateToken({ pendingSignup: true, fullName, email, passwordHash, phone });
+  return reply.send({ success: true, signupSessionToken, message: 'Step 1 complete. Check your email for OTP.' });
 };
 
 export const userStep2VerifyOtp = async (request: FastifyRequest, reply: FastifyReply) => {
-  const { emailOtp, phoneOtp } = request.body as any;
-  const user = (request as any).user;
+  const { emailOtp } = request.body as any;
+  const pending = (request as any).pendingSignup;
 
-  const emailOk = await OtpService.verifyOtp(user.email, emailOtp, 'email_verify');
-  const phoneOk = await OtpService.verifyOtp(user.phone, phoneOtp, 'phone_verify');
-
-  if (!emailOk || !phoneOk) {
-    return reply.status(400).send({ success: false, error: { code: 'INVALID_OTP', message: 'One or both OTPs are invalid' }});
+  const emailOk = await OtpService.verifyOtp(pending.email, emailOtp, 'email_verify');
+  if (!emailOk) {
+    return reply.status(400).send({ success: false, error: { code: 'INVALID_OTP', message: 'Invalid or expired OTP' }});
   }
 
-  user.emailVerified = true;
-  user.phoneVerified = true;
-  user.signupStep = 2;
-  await user.save();
+  // OTP verified — now create the user
+  if (await User.exists({ email: pending.email })) {
+    return reply.status(400).send({ success: false, error: { code: 'EMAIL_ALREADY_EXISTS', message: 'Email exists' }});
+  }
+
+  const user = await User.create({
+    fullName: pending.fullName,
+    email: pending.email,
+    passwordHash: pending.passwordHash,
+    phone: pending.phone,
+    role: 'professional',
+    status: 'onboarding',
+    signupStep: 2,
+    emailVerified: true,
+  });
 
   await TrustScoreService.addPoints({ userId: user._id.toString(), delta: 5, reason: 'Email verified' });
-  await TrustScoreService.addPoints({ userId: user._id.toString(), delta: 10, reason: 'Phone verified' });
+  await AuditLog.create({ userId: user._id, action: 'signup_step_2', ip: request.ip });
 
-  return reply.send({ success: true, message: 'Step 2 complete' });
+  // Issue a real session token now that user exists in DB
+  const token = generateToken({ id: user._id, accountType: 'user' });
+  return reply.send({ success: true, signupSessionToken: token, message: 'Step 2 complete' });
 };
 
 export const userStep3ProfessionalDetails = async (request: FastifyRequest, reply: FastifyReply) => {
+  // Validation only — no DB write. Frontend buffers this and sends it at completion.
   const { jobTitle, industry, totalYearsExperience, currentCompany, linkedInUrl, bio } = request.body as any;
-  const user = (request as any).user;
-
-  user.jobTitle = jobTitle;
-  user.industry = industry;
-  user.totalExperienceMonths = (totalYearsExperience || 0) * 12;
-  user.currentCompany = currentCompany;
-  
-  if (linkedInUrl) {
-    user.linkedInUrl = linkedInUrl;
-    user.linkedInConnected = true;
+  if (!jobTitle || !industry) {
+    return reply.status(400).send({ success: false, error: { code: 'VALIDATION_ERROR', message: 'jobTitle and industry are required' } });
   }
-  user.bio = bio;
-  user.signupStep = 3;
-  await user.save();
-
-  if (user.linkedInConnected) {
-    await TrustScoreService.addPoints({ userId: user._id.toString(), delta: 10, reason: 'LinkedIn connected' });
-  }
-
-  return reply.send({ success: true, message: 'Step 3 complete' });
+  return reply.send({ success: true, message: 'Step 3 validated' });
 };
 
 export const userStep4FaceVerify = async (request: FastifyRequest, reply: FastifyReply) => {
+  // Validation only — no DB write. Returns descriptor for frontend to buffer.
   const { faceImageBase64 } = request.body as any;
-  const user = (request as any).user;
 
   const { descriptor, confidence } = await FaceService.processFaceImage(faceImageBase64);
-  
+
   if (confidence < 0.85) {
-    return reply.status(400).send({ success: false, error: { code: 'LOW_FACE_CONFIDENCE', message: 'Face not clear' }});
+    return reply.status(400).send({ success: false, error: { code: 'LOW_FACE_CONFIDENCE', message: 'Face not clear' } });
   }
 
   const isDuplicate = await FaceService.findDuplicateFace(descriptor);
   if (isDuplicate) {
-    await TrustScoreService.addPoints({ userId: user._id.toString(), delta: -50, reason: 'Duplicate face detected' });
-    user.flagForManualReview = true;
-    user.flagReason = 'Duplicate face';
-    await user.save();
-    return reply.status(400).send({ success: false, error: { code: 'DUPLICATE_FACE_DETECTED', message: 'Duplicate face' }});
+    return reply.status(400).send({ success: false, error: { code: 'DUPLICATE_FACE_DETECTED', message: 'Duplicate face' } });
   }
 
-  const url = await CloudinaryService.uploadImage(faceImageBase64, 'syncup/face-snapshots');
-  
-  user.faceSnapshotUrl = url;
-  user.faceDescriptor = descriptor;
-  user.faceVerified = true;
-  user.signupStep = 4;
-  await user.save();
-
-  await TrustScoreService.addPoints({ userId: user._id.toString(), delta: 40, reason: 'Face verified' });
-
-  return reply.send({ success: true, message: 'Step 4 complete' });
+  return reply.send({ success: true, descriptor, faceImageBase64, message: 'Step 4 validated' });
 };
 
 export const userStep5DocumentVerify = async (request: FastifyRequest, reply: FastifyReply) => {
-  const { documentType, documentImageBase64, documentImageBackBase64 } = request.body as any;
-  const user = (request as any).user;
-
-  const frontUrl = await CloudinaryService.uploadImage(documentImageBase64, 'syncup/documents');
-  let backUrl;
-  if (documentImageBackBase64) backUrl = await CloudinaryService.uploadImage(documentImageBackBase64, 'syncup/documents');
-
-  const country = await OcrService.extractCountryFromImage(documentImageBase64);
-
-  user.documentType = documentType;
-  user.documentFrontUrl = frontUrl;
-  user.documentBackUrl = backUrl;
-  user.detectedCountry = country;
-  user.documentVerificationStatus = 'pending';
-  user.signupStep = 5;
-  await user.save();
-
-  await TrustScoreService.addPoints({ userId: user._id.toString(), delta: 25, reason: 'Document uploaded' });
-
-  return reply.send({ success: true, message: 'Step 5 complete' });
+  // Validation only — no DB write. Frontend buffers and sends at completion.
+  const { documentType, documentImageBase64 } = request.body as any;
+  if (!documentType || !documentImageBase64) {
+    return reply.status(400).send({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Document required' } });
+  }
+  return reply.send({ success: true, message: 'Step 5 validated' });
 };
 
 export const userComplete = async (request: FastifyRequest, reply: FastifyReply) => {
   const user = (request as any).user;
-  
+  const {
+    // Step 3
+    jobTitle, industry, totalYearsExperience, currentCompany, linkedInUrl, bio,
+    // Step 4
+    faceImageBase64, faceDescriptor,
+    // Step 5
+    documentType, documentImageBase64,
+  } = request.body as any;
+
+  // Apply professional details
+  user.jobTitle = jobTitle;
+  user.industry = industry;
+  user.totalExperienceMonths = (totalYearsExperience || 0) * 12;
+  user.currentCompany = currentCompany;
+  if (linkedInUrl) { user.linkedInUrl = linkedInUrl; user.linkedInConnected = true; }
+  user.bio = bio;
+
+  // Apply face
+  const faceUrl = await CloudinaryService.uploadImage(faceImageBase64, 'syncup/face-snapshots');
+  user.faceSnapshotUrl = faceUrl;
+  user.faceDescriptor = faceDescriptor;
+  user.faceVerified = true;
+
+  // Apply document
+  const docUrl = await CloudinaryService.uploadImage(documentImageBase64, 'syncup/documents');
+  const country = await OcrService.extractCountryFromImage(documentImageBase64);
+  user.documentType = documentType;
+  user.documentFrontUrl = docUrl;
+  user.detectedCountry = country;
+  user.documentVerificationStatus = 'pending';
+
+  // Activate
   user.status = 'active';
-  
-  // Set badges based on milestones
-  const badges = [];
+  user.signupStep = 5;
+
+  const badges: string[] = [];
   if (user.faceVerified && user.documentVerificationStatus !== 'not_uploaded') badges.push('identity_verified');
-  if (user.phoneVerified) badges.push('phone_verified');
   if (user.linkedInConnected) badges.push('linkedin_connected');
-  if (user.trustScore >= 85) badges.push('premium_member');
   user.badges = badges;
 
   await user.save();
 
+  await TrustScoreService.addPoints({ userId: user._id.toString(), delta: 40, reason: 'Face verified' });
+  await TrustScoreService.addPoints({ userId: user._id.toString(), delta: 25, reason: 'Document uploaded' });
+  if (user.linkedInConnected) await TrustScoreService.addPoints({ userId: user._id.toString(), delta: 10, reason: 'LinkedIn connected' });
+
   const token = generateToken({ id: user._id, accountType: 'user' });
   const refreshToken = generateToken({ id: user._id, accountType: 'user', refresh: true });
-
   user.refreshTokens.push({ token: refreshToken, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) });
   await user.save();
 
@@ -282,7 +275,7 @@ export const companyStep1 = async (request: FastifyRequest, reply: FastifyReply)
   });
 
   await OtpService.sendEmailOtp(email, 'email_verify');
-  await OtpService.sendPhoneOtp(phone, 'phone_verify');
+  // await OtpService.sendPhoneOtp(phone, 'phone_verify');
 
   const signupSessionToken = generateToken({ id: company._id, accountType: 'company' });
   return reply.send({ success: true, signupSessionToken, message: 'Company Step 1 complete' });
@@ -294,14 +287,14 @@ export const companyStep2VerifyOtp = async (request: FastifyRequest, reply: Fast
   const user = await User.findById(company.ownerId);
 
   const emailOk = await OtpService.verifyOtp(user!.email, emailOtp, 'email_verify');
-  const phoneOk = await OtpService.verifyOtp(user!.phone!, phoneOtp, 'phone_verify');
+  // const phoneOk = await OtpService.verifyOtp(user!.phone!, phoneOtp, 'phone_verify');
 
-  if (!emailOk || !phoneOk) {
-    return reply.status(400).send({ success: false, error: { code: 'INVALID_OTP', message: 'One or both OTPs are invalid' }});
+  if (!emailOk) {
+    return reply.status(400).send({ success: false, error: { code: 'INVALID_OTP', message: 'Invalid or expired OTP' }});
   }
 
   user!.emailVerified = true;
-  user!.phoneVerified = true;
+  // user!.phoneVerified = true;
   await user!.save();
 
   company.signupStep = 2;

@@ -18,7 +18,11 @@ export const requireAuth = async (request: FastifyRequest, reply: FastifyReply) 
     }
 
     // fetch the full entity from db based on what's in the decoded token
-    if (decoded.accountType === 'company') {
+    if (decoded.pendingSignup) {
+        // Pre-verification token — no DB lookup, just attach the payload
+        (request as any).pendingSignup = decoded;
+        (request as any).accountType = 'pending';
+    } else if (decoded.accountType === 'company') {
         const company = await Company.findById(decoded.id);
         if (!company) {
             return reply.status(401).send({ success: false, error: { code: 'UNAUTHORIZED', message: 'Company not found' } });

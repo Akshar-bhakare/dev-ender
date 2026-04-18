@@ -11,36 +11,49 @@ interface UserStepsProps {
   onBack: () => void;
 }
 
+const SIGNUP_KEY = "signup_progress";
+
+const defaultFormData = {
+  fullName: "", email: "", password: "", phone: "",
+  emailOtp: "", jobTitle: "", industry: "",
+  totalYearsExperience: "", currentCompany: "", linkedInUrl: "", bio: "",
+  documentType: "aadhaar",
+};
+
+type BufferedData = {
+  step3?: { jobTitle: string; industry: string; totalYearsExperience: string; currentCompany: string; linkedInUrl: string; bio: string; };
+  step4?: { faceImageBase64: string; faceDescriptor: number[]; };
+  step5?: { documentType: string; documentImageBase64: string; };
+};
+
 export const UserSteps = ({ onBack }: UserStepsProps) => {
-  const [step, setStep] = useState(1);
+  const saved = typeof window !== "undefined"
+    ? JSON.parse(localStorage.getItem(SIGNUP_KEY) || "null") : null;
+
+  const [step, setStep] = useState<number>(saved?.step || 1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { login } = useAuth();
   const router = useRouter();
 
-  // Shared state
-  const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    password: "",
-    phone: "",
-    emailOtp: "",
-    phoneOtp: "",
-    jobTitle: "",
-    industry: "",
-    totalYearsExperience: "",
-    currentCompany: "",
-    linkedInUrl: "",
-    bio: "",
-    documentType: "aadhaar",
-  });
-
-  const [documentImageFront, setDocumentImageFront] = useState<string | null>(null);
-
+  const [formData, setFormData] = useState({ ...defaultFormData, ...(saved?.formData || {}) });
+  const [documentImageFront, setDocumentImageFront] = useState<string | null>(saved?.buffered?.step5?.documentImageBase64 || null);
+  const [buffered, setBuffered] = useState<BufferedData>(saved?.buffered || {});
   const webcamRef = useRef<Webcam>(null);
 
+  const saveProgress = (newStep: number, newFormData = formData, newBuffered = buffered) => {
+    localStorage.setItem(SIGNUP_KEY, JSON.stringify({ step: newStep, formData: newFormData, buffered: newBuffered }));
+  };
+
+  const clearProgress = () => {
+    localStorage.removeItem(SIGNUP_KEY);
+    localStorage.removeItem("signupSessionToken");
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const updated = { ...formData, [e.target.name]: e.target.value };
+    setFormData(updated);
+    saveProgress(step, updated);
   };
 
   const handleStep1 = async (e: React.FormEvent) => {
@@ -54,6 +67,7 @@ export const UserSteps = ({ onBack }: UserStepsProps) => {
         phone: formData.phone
       });
       localStorage.setItem("signupSessionToken", res.signupSessionToken);
+      saveProgress(2);
       setStep(2);
     } catch (err: any) {
       setError(err.response?.data?.error?.message || "Failed to create account");
@@ -66,10 +80,9 @@ export const UserSteps = ({ onBack }: UserStepsProps) => {
     e.preventDefault();
     setLoading(true); setError(null);
     try {
-      await api.post("/auth/user/step2/verify-otp", {
-        emailOtp: formData.emailOtp,
-        phoneOtp: formData.phoneOtp
-      });
+      const res: any = await api.post("/auth/user/step2/verify-otp", { emailOtp: formData.emailOtp });
+      localStorage.setItem("signupSessionToken", res.signupSessionToken);
+      saveProgress(3);
       setStep(3);
     } catch (err: any) {
       setError(err.response?.data?.error?.message || "Invalid OTP");
@@ -90,6 +103,14 @@ export const UserSteps = ({ onBack }: UserStepsProps) => {
         linkedInUrl: formData.linkedInUrl,
         bio: formData.bio
       });
+      // Buffer step 3 data locally, no DB write yet
+      const newBuffered = { ...buffered, step3: {
+        jobTitle: formData.jobTitle, industry: formData.industry,
+        totalYearsExperience: formData.totalYearsExperience, currentCompany: formData.currentCompany,
+        linkedInUrl: formData.linkedInUrl, bio: formData.bio
+      }};
+      setBuffered(newBuffered);
+      saveProgress(4, formData, newBuffered);
       setStep(4);
     } catch (err: any) {
       setError(err.response?.data?.error?.message || "Something went wrong");
@@ -102,30 +123,38 @@ export const UserSteps = ({ onBack }: UserStepsProps) => {
     if (!webcamRef.current) return;
     const imageSrc = webcamRef.current.getScreenshot();
     if (!imageSrc) return setError("Could not capture image from camera.");
-
     setLoading(true); setError(null);
     try {
-      await api.post("/auth/user/step4/face-verify", { faceImageBase64: imageSrc });
+      const res: any = await api.post("/auth/user/step4/face-verify", { faceImageBase64: imageSrc });
+      // Buffer face data locally, no DB write yet
+      const newBuffered = { ...buffered, step4: { faceImageBase64: imageSrc, faceDescriptor: res.descriptor } };
+      setBuffered(newBuffered);
+      saveProgress(5, formData, newBuffered);
       setStep(5);
     } catch (err: any) {
-       // if duplicate face is found, user told me it should redirect to login
-       if (err.response?.data?.error?.code === "DUPLICATE_FACE_DETECTED") {
-          alert("This face is already registered. Please log in.");
-          router.push('/login');
-       } else {
-          setError(err.response?.data?.error?.message || "Face verification failed. Please ensure your face is clearly visible.");
-       }
+      if (err.response?.data?.error?.code === "DUPLICATE_FACE_DETECTED") {
+        alert("This face is already registered. Please log in.");
+        router.push('/login');
+      } else {
+        setError(err.response?.data?.error?.message || "Face verification failed. Please ensure your face is clearly visible.");
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setDocumentImageFront(reader.result as string);
+        const result = reader.result as string;
+        setDocumentImageFront(result);
+        const newBuffered = { ...buffered, step5: { documentType: formData.documentType, documentImageBase64: result } };
+        setBuffered(newBuffered);
+        saveProgress(5, formData, newBuffered);
       };
       reader.readAsDataURL(file);
     }
@@ -134,21 +163,27 @@ export const UserSteps = ({ onBack }: UserStepsProps) => {
   const handleStep5Doc = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!documentImageFront) return setError("Please upload an ID document");
+    if (!buffered.step3 || !buffered.step4) return setError("Missing data from previous steps. Please restart.");
 
     setLoading(true); setError(null);
     try {
-      await api.post("/auth/user/step5/document-verify", {
+      // Single final DB write with all buffered data
+      const completeRes: any = await api.post("/auth/user/complete", {
+        // Step 3
+        ...buffered.step3,
+        totalYearsExperience: Number(buffered.step3.totalYearsExperience),
+        // Step 4
+        faceImageBase64: buffered.step4.faceImageBase64,
+        faceDescriptor: buffered.step4.faceDescriptor,
+        // Step 5
         documentType: formData.documentType,
-        documentImageBase64: documentImageFront
+        documentImageBase64: documentImageFront,
       });
-      
-      // Auto-complete immediately after returning successful doc
-      const completeRes: any = await api.post("/auth/user/complete");
       login(completeRes);
-      router.push("/feed"); // Or dashboard
-
+      clearProgress();
+      router.push("/feed");
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || "Document verification failed");
+      setError(err.response?.data?.error?.message || "Registration failed");
     } finally {
       setLoading(false);
     }
@@ -209,17 +244,19 @@ export const UserSteps = ({ onBack }: UserStepsProps) => {
 
       {step === 2 && (
         <form onSubmit={handleStep2} className="space-y-6">
-          <h2 className="text-2xl font-display font-bold text-slate-900 mb-2">Verify Contact Info</h2>
-          <p className="text-slate-500 mb-6 font-medium text-sm">We've sent codes to {formData.email} and your phone.</p>
+          <h2 className="text-2xl font-display font-bold text-slate-900 mb-2">Verify your Email</h2>
+          <p className="text-slate-500 mb-6 font-medium text-sm">We've sent a code to {formData.email}.</p>
           
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Email Verification Code</label>
             <input required name="emailOtp" value={formData.emailOtp} onChange={handleChange} className="w-full p-3 text-center tracking-widest text-lg font-mono rounded-xl border border-slate-200 focus:border-primary outline-none transition-all" placeholder="123456" maxLength={6} />
           </div>
+          {/* Phone OTP disabled for now
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Phone Verification Code</label>
             <input required name="phoneOtp" value={formData.phoneOtp} onChange={handleChange} className="w-full p-3 text-center tracking-widest text-lg font-mono rounded-xl border border-slate-200 focus:border-primary outline-none transition-all" placeholder="123456" maxLength={6} />
           </div>
+          */}
 
           <button disabled={loading} type="submit" className="w-full mt-6 py-4 kaame-gradient text-white rounded-xl font-bold hover:opacity-90 disabled:opacity-50 transition-all">
             {loading ? "Verifying..." : "Verify Codes"}
@@ -306,8 +343,8 @@ export const UserSteps = ({ onBack }: UserStepsProps) => {
             </select>
           </div>
 
-          <div className="w-full border-2 border-dashed border-slate-300 rounded-2xl p-8 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer relative overflow-hidden group">
-            <input type="file" accept="image/*" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
+          <div onClick={() => fileInputRef.current?.click()} className="w-full border-2 border-dashed border-slate-300 rounded-2xl p-8 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer relative overflow-hidden group">
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
             
             {documentImageFront ? (
               <img src={documentImageFront} className="absolute inset-0 w-full h-full object-cover z-0 opacity-50" />
