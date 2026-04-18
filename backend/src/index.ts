@@ -7,6 +7,7 @@ import { connectDB } from './config/db.js';
 import { jobsRoutes } from './modules/jobs/jobs.routes.js';
 import { marketplaceRoutes } from './modules/marketplace/marketplace.routes.js';
 import { paymentsRoutes } from './modules/payments/payments.routes.js';
+import { verificationRoutes } from './modules/verification/verification.routes.js';
 import fastifyRawBody from 'fastify-raw-body';
 import util from 'node:util';
 
@@ -44,6 +45,7 @@ fastify.get('/health', async () => ({
 fastify.register(jobsRoutes, { prefix: '/api/v1/jobs' });
 fastify.register(marketplaceRoutes, { prefix: '/api/v1/marketplace' });
 fastify.register(paymentsRoutes, { prefix: '/api/v1/payments' });
+fastify.register(verificationRoutes, { prefix: '/api/v1/verification' });
 
 import { eventsRoutes } from './modules/events/events.routes.js';
 import { registrationsRoutes } from './modules/registrations/registrations.routes.js';

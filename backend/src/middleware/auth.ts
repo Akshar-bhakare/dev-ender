@@ -54,3 +54,17 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply):
     });
   }
 }
+
+/**
+ * requireAdmin — preHandler that enforces administrative privileges.
+ * Returns 403 if user is not an admin.
+ */
+export async function requireAdmin(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  await requireAuth(request, reply);
+  if (request.user?.role !== 'admin') {
+    reply.code(403).send({
+      success: false,
+      error: { code: 'FORBIDDEN', message: 'Administrative access required.' },
+    });
+  }
+}

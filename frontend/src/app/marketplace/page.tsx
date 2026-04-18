@@ -83,14 +83,22 @@ export default function MarketplacePage() {
                   <span className="px-3 py-1 bg-primary/5 text-primary text-[10px] font-black uppercase tracking-widest rounded-lg">
                     {req.categories[0] || "General"}
                   </span>
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-accent">
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    Verified Request
-                  </div>
+                  {req.orgId?.verifiedStatus && (
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-accent">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      Verified Request
+                    </div>
+                  )}
                 </div>
 
                 {/* Content */}
                 <div className="flex-grow">
+                  <div className="flex items-center gap-2 mb-2">
+                     <div className="w-5 h-5 kaame-gradient rounded-md flex items-center justify-center text-[8px] text-white font-bold">
+                       {req.orgId?.name?.[0] || 'O'}
+                     </div>
+                     <span className="text-[11px] font-bold text-slate-400 capitalize">{req.orgId?.name || 'Organization'}</span>
+                  </div>
                   <h3 className="font-display font-bold text-2xl mb-4 text-slate-900 group-hover:text-primary transition-colors leading-tight">
                     {req.title}
                   </h3>

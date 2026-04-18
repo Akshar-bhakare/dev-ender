@@ -69,7 +69,9 @@ export class MarketplaceService {
     if (filters.category) query.categories = filters.category;
     if (filters.skills) query.skillsRequired = { $in: filters.skills };
     
-    return await ServiceRequirement.find(query).sort({ createdAt: -1 });
+    return await ServiceRequirement.find(query)
+      .populate('orgId')
+      .sort({ createdAt: -1 });
   }
 
   // ─── Proposal Logic ─────────────────────────────────────────

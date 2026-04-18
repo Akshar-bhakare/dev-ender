@@ -91,16 +91,29 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
         
         {/* Left Column: Details & Bidding */}
         <div className="lg:col-span-2 space-y-12">
-           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-             <div className="flex items-center gap-3 mb-6">
-                <span className="px-4 py-1.5 bg-primary/10 text-primary text-xs font-black uppercase tracking-widest rounded-xl">
-                  {requirement.categories[0]}
-                </span>
-                <div className="flex items-center gap-2 text-accent font-bold text-xs">
-                   <ShieldCheck className="w-4 h-4" />
-                   Verified RFP
-                </div>
-             </div>
+            <div className="flex flex-col md:flex-row md:items-center gap-6 mb-8 mt-4">
+               <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 kaame-gradient rounded-2xl flex items-center justify-center text-xl text-white font-display font-bold shadow-lg shadow-primary/20">
+                    {requirement.orgId?.name?.[0] || 'O'}
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-black text-slate-300 uppercase tracking-widest mb-0.5">Posted by Organization</span>
+                    <span className="text-lg font-bold text-slate-900">{requirement.orgId?.name || 'Verified Organization'}</span>
+                  </div>
+               </div>
+               <div className="h-8 w-px bg-slate-100 hidden md:block" />
+               <div className="flex items-center gap-3">
+                  <span className="px-4 py-1.5 bg-primary/10 text-primary text-xs font-black uppercase tracking-widest rounded-xl">
+                    {requirement.categories[0]}
+                  </span>
+                  {requirement.orgId?.verifiedStatus && (
+                    <div className="flex items-center gap-1.5 text-accent font-bold text-xs">
+                      <ShieldCheck className="w-4 h-4" />
+                      Verified Identity
+                    </div>
+                  )}
+               </div>
+            </div>
              
              <h1 className="font-display font-bold text-5xl mb-8 leading-tight tracking-tight">
                {requirement.title}
