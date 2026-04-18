@@ -258,7 +258,7 @@ export async function applyToJobHandler(
     const application = await JobsService.applyToJob(
       req.params.jobId,
       user.userId,
-      user.faceVerified,
+      user.identityVerified,
       totalExperienceMonths,
       body
     );
@@ -282,7 +282,7 @@ export async function saveJobHandler(
   reply: FastifyReply
 ) {
   try {
-    const result = await JobsService.saveJob(req.user!.userId, req.params.jobId, req.user!.faceVerified);
+    const result = await JobsService.saveJob(req.user!.userId, req.params.jobId, req.user!.identityVerified);
     return reply.code(201).send({ success: true, data: result });
   } catch (e) {
     handleError(reply, e);

@@ -6,7 +6,21 @@
     "type": "Remote / Full-time",
     "salary": "$180k - $240k",
     "verified": true,
-    "logo": "https://images.unsplash.com/photo-1549923746-c50264f39a1d?q=80&w=2370&auto=format&fit=crop"
+    "logo": "/assets/kaame_logo.png",
+    "postedAt": "2 days ago",
+    "applicants": 42,
+    "description": "We are looking for a Principal Design Engineer to lead our core design systems. You will be responsible for defining the visual language of the KaaMe ecosystem, ensuring a consistent and premium experience across all platforms. You will work closely with front-end engineers to implement state-of-the-art UI components using Framer Motion and Tailwind CSS.",
+    "skills": ["Design Systems", "Framer Motion", "React", "Typescript", "UI/UX Architecture"],
+    "companyInsights": {
+      "employees": "50-200",
+      "industry": "Professional Services",
+      "connections": 12
+    },
+    "hiringTeam": {
+      "name": "Sarah Chen",
+      "role": "Head of Engineering",
+      "avatar": "/assets/sarah_chen.png"
+    }
   },
   {
     "id": "j2",
@@ -15,7 +29,21 @@
     "type": "New York / Hybrid",
     "salary": "$200k + Equity",
     "verified": true,
-    "logo": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2370&auto=format&fit=crop"
+    "logo": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2370&auto=format&fit=crop",
+    "postedAt": "5 hours ago",
+    "applicants": 128,
+    "description": "AlphaFoundry is seeking a strategic leader to drive our global expansion. As the Head of Strategic Growth, you will identify new market opportunities, lead partnership negotiations, and execute high-impact growth campaigns. You must have a track record of scaling Series B+ startups and a deep understanding of B2B networking dynamics.",
+    "skills": ["Market Research", "Strategic Partnerships", "Sales Enablement", "Data Analytics", "Public Speaking"],
+    "companyInsights": {
+      "employees": "200-500",
+      "industry": "Venture Capital",
+      "connections": 5
+    },
+    "hiringTeam": {
+      "name": "Marcus Thorne",
+      "role": "Chief Operating Officer",
+      "avatar": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=200&auto=format&fit=crop"
+    }
   },
   {
     "id": "j3",
@@ -24,6 +52,135 @@
     "type": "London / On-site",
     "salary": "£120k - £160k",
     "verified": true,
-    "logo": "https://images.unsplash.com/photo-1551836022-d5d88e9218df?q=80&w=2370&auto=format&fit=crop"
+    "logo": "https://images.unsplash.com/photo-1551836022-d5d88e9218df?q=80&w=2370&auto=format&fit=crop",
+    "postedAt": "1 week ago",
+    "applicants": 15,
+    "description": "Join our elite security team as a Lead Security Researcher. You will perform deep-dive vulnerability research, develop zero-day exploits (for defensive purposes), and lead our internal red-teaming exercises. Experience with low-level systems, cryptography, and cloud security architectures is essential.",
+    "skills": ["Penetration Testing", "Security Architecture", "Reverse Engineering", "Cloud Security (AWS/GCP)", "Cryptography"],
+    "companyInsights": {
+      "employees": "1,000+",
+      "industry": "Cybersecurity",
+      "connections": 3
+    },
+    "hiringTeam": {
+      "name": "Elena Kovacs",
+      "role": "VP of Security Operations",
+      "avatar": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=200&auto=format&fit=crop"
+    }
+  },
+  {
+    "id": "j4",
+    "title": "Staff Product Manager",
+    "company": "QuantHouse",
+    "type": "Zurich / Hybrid",
+    "salary": "CHF 185k - 230k",
+    "verified": true,
+    "logo": "https://images.unsplash.com/photo-1560179707-f14e90ef3623?q=80&w=2373&auto=format&fit=crop",
+    "postedAt": "1 day ago",
+    "applicants": 34,
+    "description": "QuantHouse is building the future of algorithmic trading infrastructure. We need a Staff PM to own our low-latency data platforms. You will work with HFT firms to define requirements and lead a team of high-caliber engineers to deliver world-class products.",
+    "skills": ["Product Strategy", "High Frequency Trading", "System Architecture", "Stakeholder Management"],
+    "companyInsights": {
+      "employees": "100-250",
+      "industry": "FinTech / Trading",
+      "connections": 8
+    },
+    "hiringTeam": {
+      "name": "Adrian Weber",
+      "role": "Chief Product Officer",
+      "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop"
+    }
+  },
+  {
+    "id": "j5",
+    "title": "Senior Fullstack Engineer",
+    "company": "NovaStream",
+    "type": "Remote / Full-time",
+    "salary": "$160k - $210k",
+    "verified": true,
+    "logo": "https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=2370&auto=format&fit=crop",
+    "postedAt": "3 days ago",
+    "applicants": 89,
+    "description": "NovaStream is the leading platform for immersive live streaming. We are scaling our edge delivery network and need a Fullstack maestro to build high-performance dashboards and interactive creator tools. If you love Next.js, Rust, and WebRTC, join us.",
+    "skills": ["Next.js", "Rust", "WebRTC", "PostgreSQL", "Tailwind CSS"],
+    "companyInsights": {
+      "employees": "50-100",
+      "industry": "Media & Entertainment",
+      "connections": 22
+    },
+    "hiringTeam": {
+      "name": "Julia Park",
+      "role": "Engineering Manager",
+      "avatar": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=200&auto=format&fit=crop"
+    }
+  },
+  {
+    "id": "j6",
+    "title": "VP of Design",
+    "company": "EtherLabs",
+    "type": "San Francisco / Physical",
+    "salary": "$250k - $320k",
+    "verified": true,
+    "logo": "https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=2370&auto=format&fit=crop",
+    "postedAt": "4 days ago",
+    "applicants": 18,
+    "description": "EtherLabs is redefining how humans interact with spatial computing. As VP of Design, you will oversee our entire creative direction, from hardware interface to XR software ecosystems. You will mentor a global team of multidisciplinary designers.",
+    "skills": ["Visionary Leadership", "Spatial Computing", "Industrial Design", "Design Operations"],
+    "companyInsights": {
+      "employees": "500-1,000",
+      "industry": "Hardware & XR",
+      "connections": 45
+    },
+    "hiringTeam": {
+      "name": "Liam Sterling",
+      "role": "Founder & CEO",
+      "avatar": "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?q=80&w=200&auto=format&fit=crop"
+    }
+  },
+  {
+    "id": "j7",
+    "title": "Blockchain Architect",
+    "company": "DeFi Bridge",
+    "type": "Miami / Hybrid",
+    "salary": "$190k - $260k",
+    "verified": true,
+    "logo": "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?q=80&w=2370&auto=format&fit=crop",
+    "postedAt": "6 hours ago",
+    "applicants": 25,
+    "description": "DeFi Bridge is building the world's most secure cross-chain liquidity protocol. We need a Blockchain Architect to design our next-gen consensus mechanisms and bridge security layers. Deep knowledge of Solidity, Move, or Rust is mandatory.",
+    "skills": ["Solidity", "Rust", "Consensus Algorithms", "Cross-chain Security"],
+    "companyInsights": {
+      "employees": "20-50",
+      "industry": "Web3 / DeFi",
+      "connections": 15
+    },
+    "hiringTeam": {
+      "name": "Ananya Rao",
+      "role": "CTO",
+      "avatar": "https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=200&auto=format&fit=crop"
+    }
+  },
+  {
+    "id": "j8",
+    "title": "ML Research Scientist",
+    "company": "AetherIA",
+    "type": "Remote / Full-time",
+    "salary": "$210k - $290k",
+    "verified": true,
+    "logo": "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2370&auto=format&fit=crop",
+    "postedAt": "12 hours ago",
+    "applicants": 56,
+    "description": "AetherIA is fine-tuning the next generation of autonomous agents. We are looking for researchers focused on RLHF and sparse-model optimization. You will publish at NIPS/ICML and ship production-grade models that power the KaaMe AI ecosystem.",
+    "skills": ["PyTorch", "RLHF", "Transformer Architectures", "Model Optimization"],
+    "companyInsights": {
+      "employees": "150-300",
+      "industry": "Artificial Intelligence",
+      "connections": 30
+    },
+    "hiringTeam": {
+      "name": "David Hofstader",
+      "role": "Chief Scientist",
+      "avatar": "https://images.unsplash.com/photo-1552058544-f2b08422138a?q=80&w=200&auto=format&fit=crop"
+    }
   }
 ]

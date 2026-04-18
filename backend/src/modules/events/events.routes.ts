@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { requireAuth } from '../../middleware/auth.js'; 
-import { requireFaceVerified } from '../../middleware/requireRole.js'; // Note we might need to adjust imports
+import { requireIdentityVerified } from '../../middleware/requireRole.js'; // Note we might need to adjust imports
 import * as EventsController from './events.controller.js';
 
 export async function eventsRoutes(fastify: FastifyInstance) {

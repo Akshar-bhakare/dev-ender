@@ -5,7 +5,6 @@ export * from './Connection.js';
 export * from './Post.js';
 export * from './Comment.js';
 export * from './Reaction.js';
-export * from './Job.js';
 export * from './Application.js';
 export * from './Opportunity.js';
 export * from './Event.js';

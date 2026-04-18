@@ -6,7 +6,7 @@ export const JOB_ERROR_CODES = {
   JOB_NOT_FOUND: 'JOB_NOT_FOUND',
   JOB_NOT_PUBLISHED: 'JOB_NOT_PUBLISHED',
   COMPANY_NOT_VERIFIED: 'COMPANY_NOT_VERIFIED',
-  USER_NOT_FACE_VERIFIED: 'USER_NOT_FACE_VERIFIED',
+  USER_NOT_IDENTITY_VERIFIED: 'USER_NOT_IDENTITY_VERIFIED',
   INSUFFICIENT_EXPERIENCE: 'INSUFFICIENT_EXPERIENCE',
   DUPLICATE_APPLICATION: 'DUPLICATE_APPLICATION',
   UNAUTHORIZED: 'UNAUTHORIZED',
@@ -41,8 +41,8 @@ export const jobError = {
     new JobError('JOB_NOT_PUBLISHED', 'Job is not currently published.', 400),
   companyNotVerified: () =>
     new JobError('COMPANY_NOT_VERIFIED', 'Only verified companies can post jobs.', 403),
-  notFaceVerified: () =>
-    new JobError('USER_NOT_FACE_VERIFIED', 'Face verification is required to apply or save jobs.', 403),
+  notIdentityVerified: () =>
+    new JobError('USER_NOT_IDENTITY_VERIFIED', 'Identity verification is required to apply or save jobs.', 403),
   insufficientExperience: () =>
     new JobError('INSUFFICIENT_EXPERIENCE', 'Minimum 12 months of experience required to apply.', 403),
   duplicateApplication: () =>

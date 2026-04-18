@@ -10,7 +10,7 @@ export interface JwtPayload {
   userId: string;
   companyId?: string;
   isVerified: boolean;
-  faceVerified: boolean;
+  identityVerified: boolean;
   role?: string;
 }
 
