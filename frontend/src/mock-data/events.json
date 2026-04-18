@@ -1,0 +1,29 @@
+[
+  {
+    "id": "e1",
+    "title": "KaaMe Global Founders Sync",
+    "date": "April 24, 2026",
+    "type": "Virtual / Private",
+    "organizer": "KaaMe Core",
+    "verified": true,
+    "image": "https://images.unsplash.com/photo-1540317580384-e5d43616b9aa?q=80&w=2370&auto=format&fit=crop"
+  },
+  {
+    "id": "e2",
+    "title": "verified Designers Roundtable",
+    "date": "May 2, 2026",
+    "type": "San Francisco / Physical",
+    "organizer": "Designers Collective",
+    "verified": true,
+    "image": "https://images.unsplash.com/photo-1591115765373-520b7a217286?q=80&w=2370&auto=format&fit=crop"
+  },
+  {
+    "id": "e3",
+    "title": "Quantum Dev Conference 2026",
+    "date": "June 15, 2026",
+    "type": "Dubai / Physical",
+    "organizer": "Quantum Society",
+    "verified": true,
+    "image": "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?q=80&w=2312&auto=format&fit=crop"
+  }
+]

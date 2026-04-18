@@ -1,0 +1,29 @@
+{
+  "name": "dev-clash",
+  "version": "1.0.0",
+  "description": "This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).",
+  "main": "index.js",
+  "type": "module",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n \"frontend,backend\" -c \"bgBlue.bold,bgGreen.bold\" \"npm run dev --prefix frontend\" \"npm run dev --prefix backend\"",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Akshar-bhakare/dev-ender.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Akshar-bhakare/dev-ender/issues"
+  },
+  "homepage": "https://github.com/Akshar-bhakare/dev-ender#readme",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
