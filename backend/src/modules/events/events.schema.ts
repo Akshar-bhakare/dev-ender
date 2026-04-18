@@ -1,0 +1,127 @@
+import mongoose, { Schema, Document, Types } from 'mongoose';
+
+export interface IEventCategory extends Document {
+  name: string;
+  slug: string;
+  icon?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const EventCategorySchema = new Schema<IEventCategory>(
+  {
+    name: { type: String, required: true, unique: true },
+    slug: { type: String, required: true, unique: true },
+    icon: { type: String },
+  },
+  { timestamps: true }
+);
+
+export const EventCategory = mongoose.model<IEventCategory>('EventCategory', EventCategorySchema);
+
+export interface IEvent extends Document {
+  organizerUserId: Types.ObjectId;
+  organizerCompanyId?: Types.ObjectId;
+  title: string;
+  slug: string;
+  tagline?: string | null;
+  description: string;
+  bannerImage: string;
+  mediaGallery: string[];
+  categoryId: Types.ObjectId;
+  eventType: 'hackathon' | 'conference' | 'workshop' | 'networking' | 'startup_showcase' | 'hiring_event' | 'webinar' | 'other';
+  tags: string[];
+  mode: 'in_person' | 'virtual' | 'hybrid';
+  location?: {
+    venue: string;
+    address: string;
+    city: string;
+    state: string;
+    country: string;
+    mapLink?: string | null;
+  } | null;
+  virtualLink?: string | null;
+  startDateTime: Date;
+  endDateTime: Date;
+  timezone: string;
+  isFree: boolean;
+  ticketPrice?: number | null;
+  currency: string;
+  maxAttendees: number;
+  registrationCount: number;
+  waitlistEnabled: boolean;
+  registrationDeadline?: Date | null;
+  status: 'draft' | 'published' | 'ongoing' | 'completed' | 'cancelled';
+  isBoosted: boolean;
+  boostedUntil?: Date;
+  requiresAdminReview: boolean;
+  cancelledAt?: Date;
+  cancellationReason?: string;
+  averageRating: number;
+  reviewCount: number;
+  viewCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const EventSchema = new Schema<IEvent>(
+  {
+    organizerUserId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    organizerCompanyId: { type: Schema.Types.ObjectId, ref: 'Company' },
+    title: { type: String, required: true, minlength: 5, maxlength: 150 },
+    slug: { type: String, required: true, unique: true },
+    tagline: { type: String, maxlength: 200 },
+    description: { type: String, required: true },
+    bannerImage: { type: String, required: true },
+    mediaGallery: { type: [String], validate: [(val: string[]) => val.length <= 10, 'max 10 images'] },
+    categoryId: { type: Schema.Types.ObjectId, ref: 'EventCategory', required: true },
+    eventType: {
+      type: String,
+      enum: ['hackathon', 'conference', 'workshop', 'networking', 'startup_showcase', 'hiring_event', 'webinar', 'other'],
+      required: true,
+    },
+    tags: { type: [String], validate: [(val: string[]) => val.length <= 10, 'max 10 tags'] },
+    mode: { type: String, enum: ['in_person', 'virtual', 'hybrid'], required: true },
+    location: {
+      venue: { type: String },
+      address: { type: String },
+      city: { type: String },
+      state: { type: String },
+      country: { type: String },
+      mapLink: { type: String },
+    },
+    virtualLink: { type: String },
+    startDateTime: { type: Date, required: true },
+    endDateTime: { type: Date, required: true },
+    timezone: { type: String, required: true },
+    isFree: { type: Boolean, required: true, default: true },
+    ticketPrice: { type: Number },
+    currency: { type: String, default: 'INR' },
+    maxAttendees: { type: Number, required: true, min: 1 },
+    registrationCount: { type: Number, default: 0 },
+    waitlistEnabled: { type: Boolean, default: false },
+    registrationDeadline: { type: Date },
+    status: {
+      type: String,
+      enum: ['draft', 'published', 'ongoing', 'completed', 'cancelled'],
+      default: 'draft',
+    },
+    isBoosted: { type: Boolean, default: false },
+    boostedUntil: { type: Date },
+    requiresAdminReview: { type: Boolean, default: false },
+    cancelledAt: { type: Date },
+    cancellationReason: { type: String },
+    averageRating: { type: Number, default: 0 },
+    reviewCount: { type: Number, default: 0 },
+    viewCount: { type: Number, default: 0 },
+  },
+  { timestamps: true }
+);
+
+EventSchema.index({ slug: 1 });
+EventSchema.index({ startDateTime: 1 });
+EventSchema.index({ status: 1 });
+EventSchema.index({ isBoosted: -1, startDateTime: 1 });
+EventSchema.index({ title: 'text', tagline: 'text', tags: 'text' });
+
+export const EventModel = mongoose.model<IEvent>('Event', EventSchema);

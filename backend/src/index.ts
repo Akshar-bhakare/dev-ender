@@ -22,6 +22,14 @@ fastify.get('/health', async () => ({
 // ── Register feature modules ──────────────────────────────────
 fastify.register(jobsRoutes, { prefix: '/api/v1/jobs' });
 
+import { eventsRoutes } from './modules/events/events.routes.js';
+import { registrationsRoutes } from './modules/registrations/registrations.routes.js';
+import { reviewsRoutes } from './modules/reviews/reviews.routes.js';
+
+fastify.register(eventsRoutes, { prefix: '/api/v1/events' });
+fastify.register(registrationsRoutes, { prefix: '/api/v1/events' });
+fastify.register(reviewsRoutes, { prefix: '/api/v1/events' });
+
 // Start the server
 const start = async () => {
   try {
