@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 
 export const KaaMeNavbar = () => {
   return (
-    <nav className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 py-4 flex items-center justify-between overflow-hidden">
+    <nav className="sticky top-0 z-50 w-full bg-[var(--glass-bg)] backdrop-blur-xl border-b border-[var(--glass-border)] px-6 py-4 flex items-center justify-between overflow-hidden">
       {/* Funky Background Shape */}
       <div className="absolute -top-10 -left-10 w-40 h-40 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
       

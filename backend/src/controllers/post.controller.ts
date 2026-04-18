@@ -4,7 +4,7 @@ import { Post, User } from '../models/index.js';
 export const getFeed = async (request: FastifyRequest, reply: FastifyReply) => {
   try {
     const posts = await Post.find({})
-      .populate('author', 'name uid email faceVerified kycStatus avatar company')
+      .populate('author', 'name uid email identityVerified kycStatus avatar company')
       .sort({ createdAt: -1 })
       .limit(20);
     
@@ -35,7 +35,7 @@ export const createPost = async (request: FastifyRequest, reply: FastifyReply) =
     await post.save();
     
     // Return populated post
-    const populatedPost = await post.populate('author', 'name uid email faceVerified kycStatus avatar company');
+    const populatedPost = await post.populate('author', 'name uid email identityVerified kycStatus avatar company');
 
     return reply.status(201).send(populatedPost);
   } catch (error: any) {

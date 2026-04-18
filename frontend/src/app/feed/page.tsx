@@ -8,7 +8,7 @@ import usersData from "@/mock-data/users.json";
 import feedData from "@/mock-data/feed.json";
 import { Briefcase, Users, Star, TrendingUp, ShieldCheck, Zap, Image as ImageIcon, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function FeedPage() {
   const router = useRouter();

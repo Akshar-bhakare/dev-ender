@@ -52,7 +52,7 @@ export class JobsService {
    */
   static async createListing(companyId: string, userId: string, data: CreateJobInput) {
     const company = await Company.findById(companyId);
-    if (!company || (!company.verifiedStatus && !company.identityVerified)) {
+    if (!company || (company.verificationStatus !== 'verified' && !company.identityVerified)) {
       throw jobError.companyNotVerified();
     }
 

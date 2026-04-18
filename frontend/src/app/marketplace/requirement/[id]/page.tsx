@@ -14,7 +14,8 @@ import {
   Users, 
   Zap,
   Loader2,
-  CheckCircle2
+  CheckCircle2,
+  Star
 } from "lucide-react";
 
 export default function RequirementDetailPage({ params }: { params: Promise<{ id: string }> }) {

@@ -1,11 +1,30 @@
 import { FastifyInstance } from 'fastify';
-import { register, login, verifyFace, verifyDoc } from '../controllers/auth.controller.js';
-import { authenticate } from '../middleware/auth.middleware.js';
+import * as AuthController from '../controllers/auth.controller.js';
+import { requireAuth } from '../middleware/auth.middleware.js';
 
 export default async function authRoutes(fastify: FastifyInstance) {
-  fastify.post('/register', register);
-  fastify.post('/login', login);
-  fastify.post('/verify-face', { preHandler: [authenticate] }, verifyFace);
-  fastify.post('/verify-doc', { preHandler: [authenticate] }, verifyDoc);
-}
+  // Shared
+  fastify.post('/auth/check-type', AuthController.checkType);
+  fastify.post('/auth/login', AuthController.login);
+  fastify.post('/auth/refresh', AuthController.refresh);
+  fastify.post('/auth/logout', { preHandler: [requireAuth] }, AuthController.logout);
+  fastify.post('/auth/forgot-password', AuthController.forgotPassword);
+  fastify.post('/auth/reset-password', AuthController.resetPassword);
+  fastify.get('/auth/me', { preHandler: [requireAuth] }, AuthController.getMe);
 
+  // User Signup Flow
+  fastify.post('/auth/user/step1', AuthController.userStep1);
+  fastify.post('/auth/user/step2/verify-otp', { preHandler: [requireAuth] }, AuthController.userStep2VerifyOtp);
+  fastify.post('/auth/user/step3/professional-details', { preHandler: [requireAuth] }, AuthController.userStep3ProfessionalDetails);
+  fastify.post('/auth/user/step4/face-verify', { preHandler: [requireAuth] }, AuthController.userStep4FaceVerify);
+  fastify.post('/auth/user/step5/document-verify', { preHandler: [requireAuth] }, AuthController.userStep5DocumentVerify);
+  fastify.post('/auth/user/complete', { preHandler: [requireAuth] }, AuthController.userComplete);
+
+  // Company Signup Flow
+  fastify.post('/auth/company/step1', AuthController.companyStep1);
+  fastify.post('/auth/company/step2/verify-otp', { preHandler: [requireAuth] }, AuthController.companyStep2VerifyOtp);
+  fastify.post('/auth/company/step3/basic-info', { preHandler: [requireAuth] }, AuthController.companyStep3BasicInfo);
+  fastify.post('/auth/company/step4/detailed-info', { preHandler: [requireAuth] }, AuthController.companyStep4DetailedInfo);
+  fastify.post('/auth/company/step5/documents', { preHandler: [requireAuth] }, AuthController.companyStep5Documents);
+  fastify.post('/auth/company/step6/ownership', { preHandler: [requireAuth] }, AuthController.companyStep6Ownership);
+}

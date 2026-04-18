@@ -1,6 +1,5 @@
-// ============================================================
 // auth.ts — JWT decode middleware. Attaches userId, companyId,
-//            isVerified, and faceVerified to the request object.
+//            isVerified, and identityVerified to the request object.
 // ============================================================
 
 import { FastifyRequest, FastifyReply } from 'fastify';

@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { Space_Grotesk, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
+// Force TypeScript to accept lucide-react globally
+declare module 'lucide-react';
+
+
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
   subsets: ["latin"],
@@ -17,6 +21,8 @@ export const metadata: Metadata = {
   description: "kaam + me. Build your professional future with the ultimate trusted network.",
 };
 
+import { AuthProvider } from "@/contexts/AuthContext";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -28,7 +34,9 @@ export default function RootLayout({
       className={`${spaceGrotesk.variable} ${plusJakartaSans.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[#FAFAFA] text-[#0F172A] selection:bg-cyan-200">
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

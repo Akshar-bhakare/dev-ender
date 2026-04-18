@@ -28,12 +28,12 @@ export const createEvent = async (data: Partial<IEvent>, userId: string, company
 export const updateEvent = async (eventId: string, userId: string, data: Partial<IEvent>) => {
   const event = await EventModel.findById(eventId);
   if (!event) throw new EventError(ERROR_CODES.NOT_FOUND, 'Event not found');
-  if (event.organizerUserId.toString() !== userId) throw new EventError(ERROR_CODES.UNAUTHORIZED, 'Not authorized');
+  if ((event.organizerUserId?.toString() ?? '') !== userId) throw new EventError(ERROR_CODES.UNAUTHORIZED, 'Not authorized');
   if (event.status !== 'draft') throw new EventError(ERROR_CODES.UNAUTHORIZED, 'Can only update draft events');
 
   Object.assign(event, data);
   
-  if (!event.isFree && event.maxAttendees > 50) {
+  if (!event.isFree && (event.maxAttendees ?? 0) > 50) {
     event.requiresAdminReview = true;
   } else {
     event.requiresAdminReview = false;
@@ -46,7 +46,7 @@ export const updateEvent = async (eventId: string, userId: string, data: Partial
 export const publishEvent = async (eventId: string, userId: string) => {
   const event = await EventModel.findById(eventId);
   if (!event) throw new EventError(ERROR_CODES.NOT_FOUND, 'Event not found');
-  if (event.organizerUserId.toString() !== userId) throw new EventError(ERROR_CODES.UNAUTHORIZED, 'Not authorized');
+  if ((event.organizerUserId?.toString() ?? '') !== userId) throw new EventError(ERROR_CODES.UNAUTHORIZED, 'Not authorized');
   if (event.status !== 'draft') throw new EventError(ERROR_CODES.UNAUTHORIZED, 'Event is already published or cancelled');
 
   if (event.requiresAdminReview) {
@@ -61,13 +61,13 @@ export const publishEvent = async (eventId: string, userId: string) => {
 export const completeEvent = async (eventId: string, userId: string) => {
   const event = await EventModel.findById(eventId);
   if (!event) throw new EventError(ERROR_CODES.NOT_FOUND, 'Event not found');
-  if (event.organizerUserId.toString() !== userId) throw new EventError(ERROR_CODES.UNAUTHORIZED, 'Not authorized');
+  if ((event.organizerUserId?.toString() ?? '') !== userId) throw new EventError(ERROR_CODES.UNAUTHORIZED, 'Not authorized');
   
   if (!['published', 'ongoing'].includes(event.status)) {
     throw new EventError(ERROR_CODES.UNAUTHORIZED, 'Event must be published or ongoing to be completed');
   }
 
-  if (new Date() < new Date(event.endDateTime)) {
+  if (event.endDateTime && new Date() < new Date(event.endDateTime)) {
     throw new EventError(ERROR_CODES.VALIDATION_ERROR, 'Cannot complete event before its end time');
   }
 
@@ -83,7 +83,7 @@ export const completeEvent = async (eventId: string, userId: string) => {
 export const cancelEvent = async (eventId: string, userId: string, reason: string) => {
   const event = await EventModel.findById(eventId);
   if (!event) throw new EventError(ERROR_CODES.NOT_FOUND, 'Event not found');
-  if (event.organizerUserId.toString() !== userId) throw new EventError(ERROR_CODES.UNAUTHORIZED, 'Not authorized');
+  if ((event.organizerUserId?.toString() ?? '') !== userId) throw new EventError(ERROR_CODES.UNAUTHORIZED, 'Not authorized');
   if (event.status === 'cancelled') throw new EventError(ERROR_CODES.ALREADY_CANCELLED, 'Event already cancelled');
 
   event.status = 'cancelled';
@@ -147,7 +147,7 @@ export const getEventBySlugOrId = async (identifier: string) => {
 export const boostEvent = async (eventId: string, userId: string, boostedUntil: Date) => {
   const event = await EventModel.findById(eventId);
   if (!event) throw new EventError(ERROR_CODES.NOT_FOUND, 'Event not found');
-  if (event.organizerUserId.toString() !== userId) throw new EventError(ERROR_CODES.UNAUTHORIZED, 'Not authorized');
+  if ((event.organizerUserId?.toString() ?? '') !== userId) throw new EventError(ERROR_CODES.UNAUTHORIZED, 'Not authorized');
 
   event.isBoosted = true;
   event.boostedUntil = boostedUntil;

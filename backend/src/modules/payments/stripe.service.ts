@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
 import { Event, Registration } from '../../models/index.js';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder_key', {
   apiVersion: '2025-01-27' as any, // Use latest stable
 });
 
@@ -16,7 +16,8 @@ export class StripeService {
   static async createCheckoutSession(eventId: string, userId: string) {
     const event = await Event.findById(eventId);
     if (!event) throw new Error('Event not found');
-    if (event.price <= 0) throw new Error('This is a free event');
+    if ((event.price ?? event.ticketPrice ?? 0) <= 0) throw new Error('This is a free event');
+    const eventPrice = event.price ?? event.ticketPrice ?? 0;
 
     // Create a pending registration
     const registration = await Registration.findOneAndUpdate(
@@ -24,7 +25,7 @@ export class StripeService {
       { 
         status: 'going', 
         paymentStatus: 'pending',
-        amountPaid: event.price
+        amountPaid: eventPrice
       },
       { upsert: true, new: true }
     );
@@ -39,7 +40,7 @@ export class StripeService {
               name: `Registration: ${event.title}`,
               description: event.description.substring(0, 100),
             },
-            unit_amount: Math.round(event.price * 100), // Stripe uses cents
+            unit_amount: Math.round(eventPrice * 100), // Stripe uses cents
           },
           quantity: 1,
         },

@@ -1,141 +1,41 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { User, Company } from '../../models/index.js';
+import { TrustScoreService } from './trust.service.js';
+import { User } from '../../models/User.js';
 
-export async function calculateOrganizerScore(request: FastifyRequest, reply: FastifyReply) {
-  const { organizerId, organizerModel } = request.body as { organizerId: string, organizerModel: 'User' | 'Company' };
+export const updateTrust = async (request: FastifyRequest, reply: FastifyReply) => {
+  // Check internal secret header
+  const secret = request.headers['x-internal-secret'];
+  if (secret !== process.env.INTERNAL_SECRET) {
+    return reply.status(401).send({ success: false, error: { code: 'UNAUTHORIZED', message: 'Internal API access denied' }});
+  }
 
-  if (!organizerId || !organizerModel) {
-    return reply.status(400).send({ error: 'Missing organizerId or organizerModel' });
+  const { userId, companyId, delta, reason } = request.body as any;
+
+  if (!delta || !reason || (!userId && !companyId)) {
+    return reply.status(400).send({ success: false, message: 'Invalid payload' });
   }
 
   try {
-    let organizer;
-    if (organizerModel === 'Company') {
-      organizer = await Company.findById(organizerId);
-    } else {
-      organizer = await User.findById(organizerId);
-    }
-
-    if (!organizer) {
-      return reply.status(404).send({ error: 'Organizer not found' });
-    }
-
-    // Trust Score Calculation Engine Logic
-    const identityVerifiedScore = organizer.identityVerified ? 40 : 0;
-    const eventsScore = Math.min((organizer.totalEventsHosted || 0) * 5, 25);
-    
-    let ratingScore = 0;
-    const avgRating = organizer.avgRating || 0;
-    if (avgRating > 4.5) {
-      ratingScore = 15;
-    } else if (avgRating >= 3.0) {
-      ratingScore = 8;
-    }
-
-    const cancellationPenalty = (organizer.cancellationsCount || 0) * 10;
-
-    let score = identityVerifiedScore + eventsScore + ratingScore - cancellationPenalty;
-    
-    // Additional Company Trust (if applicable)
-    if (organizerModel === 'Company' && (organizer as any).verifiedStatus) {
-      score += 15;
-    }
-    
-    // Bounds check
-    if (score < 0) score = 0;
-    if (score > 100) score = 100;
-
-    organizer.trustScore = score;
-    await organizer.save();
-
-    let decisionStatus = 'PENDING_REVIEW';
-    if (score >= 60) decisionStatus = 'AUTO_APPROVED';
-    else if (score < 30) decisionStatus = 'BLOCKED';
-
-    return reply.status(200).send({
-      trustScore: score,
-      status: decisionStatus,
-      message: 'Trust score calculated successfully.'
+    const result = await TrustScoreService.addPoints({
+      userId,
+      companyId,
+      delta: Number(delta),
+      reason,
+      ip: request.ip
     });
+
+    return reply.send({ success: true, newScore: result.newScore, level: result.level, tier: result.tier });
   } catch (error: any) {
-    request.log.error(error);
-    return reply.status(500).send({ error: 'Failed to calculate trust score' });
+     request.log.error(error);
+     return reply.status(500).send({ success: false, message: error.message });
   }
-}
+};
 
-export async function updateReputation(request: FastifyRequest, reply: FastifyReply) {
-  const { organizerId, organizerModel, newRating, eventCancelled } = request.body as { 
-    organizerId: string, 
-    organizerModel: 'User' | 'Company',
-    newRating?: number,
-    eventCancelled?: boolean
-  };
-
-  try {
-    let organizer;
-    if (organizerModel === 'Company') {
-      organizer = await Company.findById(organizerId);
-    } else {
-      organizer = await User.findById(organizerId);
-    }
-
-    if (!organizer) {
-      return reply.status(404).send({ error: 'Organizer not found' });
-    }
-
-    if (eventCancelled) {
-      organizer.cancellationsCount = (organizer.cancellationsCount || 0) + 1;
-    } else {
-      organizer.totalEventsHosted = (organizer.totalEventsHosted || 0) + 1;
-      
-      if (newRating !== undefined) {
-        // Simple rolling average approx, or exact if we tracked total reviews
-        // For hackathon: (currentAvg * eventsHosted + newRating) / (eventsHosted + 1)
-        const currentAvg = organizer.avgRating || 0;
-        const total = organizer.totalEventsHosted; // already incremented
-        organizer.avgRating = ((currentAvg * (total - 1)) + newRating) / total;
-      }
-    }
-
-    await organizer.save();
-
-    // Trigger score recalculation
-    const mockRequest = {
-      body: { organizerId, organizerModel },
-      log: request.log
-    } as any;
-    
-    // We can just call the logic directly or reuse the helper if we separate it. 
-    // Since it's a hackathon demo, we can just save and return success, asking them to call calculate again,
-    // OR we recalculate here inline. Let's recalculate inline briefly.
-    
-    const identityVerifiedScore = organizer.identityVerified ? 40 : 0;
-    const eventsScore = Math.min((organizer.totalEventsHosted || 0) * 5, 25);
-    let ratingScore = 0;
-    const avgRating = organizer.avgRating || 0;
-    if (avgRating > 4.5) ratingScore = 15;
-    else if (avgRating >= 3.0) ratingScore = 8;
-    const cancellationPenalty = (organizer.cancellationsCount || 0) * 10;
-
-    let score = identityVerifiedScore + eventsScore + ratingScore - cancellationPenalty;
-    if (organizerModel === 'Company' && (organizer as any).verifiedStatus) score += 15;
-    if (score < 0) score = 0;
-    if (score > 100) score = 100;
-
-    organizer.trustScore = score;
-    await organizer.save();
-
-    return reply.status(200).send({
-      message: 'Reputation updated',
-      organizer: {
-        totalEventsHosted: organizer.totalEventsHosted,
-        avgRating: organizer.avgRating,
-        cancellationsCount: organizer.cancellationsCount,
-        trustScore: score
-      }
-    });
-  } catch (error: any) {
-    request.log.error(error);
-    return reply.status(500).send({ error: 'Failed to update reputation' });
+export const getTrustProfile = async (request: FastifyRequest, reply: FastifyReply) => {
+  const { userId } = request.params as any;
+  const user = await User.findById(userId).select('trustScore trustLevel permissionTier badges identityVerified isVerified');
+  if (!user) {
+    return reply.status(404).send({ success: false, message: 'User not found' });
   }
-}
+  return reply.send({ success: true, profile: user });
+};

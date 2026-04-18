@@ -39,8 +39,7 @@ export default function Home() {
               particleColor="#0ea5e9"
             />
 
-            {/* Subtle radial mask to blend edges */}
-            <div className="absolute inset-0 w-full h-full bg-[#FAFAFA]/10 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,white)]"></div>
+            {/* Subtle radial mask removed for better text legibility */}
           </div>
 
           <motion.div
@@ -54,7 +53,7 @@ export default function Home() {
             </h1>
             
             <div className="mt-4 max-w-2xl mx-auto">
-              <TextGenerateEffect words={words} className="text-slate-600 font-medium text-lg leading-relaxed" />
+              <TextGenerateEffect words={words} className="text-slate-900 font-medium text-xl leading-relaxed" />
             </div>
 
             <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-6">

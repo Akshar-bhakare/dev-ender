@@ -3,7 +3,52 @@
 import { motion } from "framer-motion";
 import { KaaMeNavbar } from "@/components/kaa-me/KaaMeNavbar";
 import eventsData from "@/mock-data/events.json";
-import { Calendar, MapPin, Users, Ticket, ArrowRight, ShieldCheck } from "lucide-react";
+
+// Inlined Icons to bypass persistent Lucide resolution issues in this file
+const IconProps = {
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: "2",
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+};
+
+const CalendarIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" {...IconProps} className={className}>
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+  </svg>
+);
+
+const MapPinIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" {...IconProps} className={className}>
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+  </svg>
+);
+
+const UsersIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" {...IconProps} className={className}>
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+  </svg>
+);
+
+const TicketIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" {...IconProps} className={className}>
+    <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><line x1="13" y1="5" x2="13" y2="19"/>
+  </svg>
+);
+
+const ArrowRightIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" {...IconProps} className={className}>
+    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+  </svg>
+);
+
+const VerifiedBadge = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    <path d="m9 12 2 2 4-4" />
+  </svg>
+);
 
 export default function EventsPage() {
   return (
@@ -47,17 +92,17 @@ export default function EventsPage() {
             </h2>
             <div className="flex flex-wrap items-center gap-8 mb-10 text-white/80">
               <div className="flex items-center gap-2 font-bold text-sm">
-                <MapPin className="w-5 h-5 text-primary" />
+                <MapPinIcon className="w-5 h-5 text-primary" />
                 {eventsData[2].type}
               </div>
               <div className="flex items-center gap-2 font-bold text-sm">
-                <Users className="w-5 h-5 text-primary" />
+                <UsersIcon className="w-5 h-5 text-primary" />
                 Limited to 500 Verified Professionals
               </div>
             </div>
             <button className="w-full md:w-auto px-12 py-5 bg-white text-slate-900 rounded-2xl font-display font-bold text-xl hover:bg-primary hover:text-white transition-all shadow-xl shadow-black/20 flex items-center justify-center gap-3 group/btn">
               Secure Private Pass
-              <ArrowRight className="w-6 h-6 group-hover/btn:translate-x-2 transition-transform" />
+              <ArrowRightIcon className="w-6 h-6 group-hover/btn:translate-x-2 transition-transform" />
             </button>
           </div>
         </motion.div>
@@ -81,7 +126,7 @@ export default function EventsPage() {
                   <div className="flex items-center justify-between mb-6">
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{event.date}</span>
                     <div className="flex items-center gap-1.5 text-[10px] font-bold text-accent">
-                      <ShieldCheck className="w-3 h-3" />
+                      <VerifiedBadge className="w-3 h-3" />
                       {event.verified ? "Verified Org" : ""}
                     </div>
                   </div>
@@ -89,7 +134,7 @@ export default function EventsPage() {
                     {event.title}
                   </h3>
                   <div className="flex items-center gap-2 text-xs font-bold text-slate-500 mb-8">
-                    <MapPin className="w-4 h-4" />
+                    <MapPinIcon className="w-4 h-4" />
                     {event.type}
                   </div>
                 </div>
@@ -100,7 +145,7 @@ export default function EventsPage() {
                     <span className="text-sm font-bold text-slate-900">{event.organizer}</span>
                   </div>
                   <button className="p-4 bg-slate-50 text-slate-900 rounded-2xl hover:bg-primary hover:text-white transition-all">
-                    <Ticket className="w-6 h-6" />
+                    <TicketIcon className="w-6 h-6" />
                   </button>
                 </div>
               </div>
@@ -111,7 +156,7 @@ export default function EventsPage() {
         {/* Community Section */}
         <div className="mt-32 text-center">
           <div className="kaame-gradient w-24 h-24 rounded-3xl mx-auto mb-8 flex items-center justify-center text-white shadow-2xl shadow-primary/40 rotate-12">
-            <Calendar className="w-12 h-12" />
+            <CalendarIcon className="w-12 h-12" />
           </div>
           <h2 className="font-display font-bold text-4xl mb-6">Host your own sync.</h2>
           <p className="text-slate-500 font-medium mb-12 max-w-lg mx-auto">

@@ -41,7 +41,7 @@ export class MarketplaceService {
 
   static async createRequirement(orgId: string, userId: string, data: any) {
     const org = await Company.findById(orgId);
-    if (!org?.verifiedStatus) {
+    if (org?.verificationStatus !== 'verified') {
       throw new MarketplaceError(MarketplaceErrorCode.COMPANY_NOT_VERIFIED, 'Only verified organizations can post requirements.');
     }
     return await ServiceRequirement.create({ 
@@ -76,7 +76,7 @@ export class MarketplaceService {
 
   static async submitProposal(providerOrgId: string, userId: string, data: any) {
     const org = await Company.findById(providerOrgId);
-    if (!org?.verifiedStatus) {
+    if (org?.verificationStatus !== 'verified') {
       throw new MarketplaceError(MarketplaceErrorCode.COMPANY_NOT_VERIFIED, 'Only verified organizations can submit proposals.');
     }
 

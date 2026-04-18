@@ -203,7 +203,7 @@ export const calculateRefund = async (request: FastifyRequest, reply: FastifyRep
     const event = await EventService.getEventBySlugOrId(params.eventId);
     
     const now = new Date();
-    const eventDate = new Date(event.startDateTime);
+    const eventDate = new Date(event.startDateTime ?? event.date ?? new Date());
     const diffTime = eventDate.getTime() - now.getTime();
     const daysBeforeEvent = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 

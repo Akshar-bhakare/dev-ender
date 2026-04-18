@@ -26,6 +26,8 @@
   --input: #e2e8f0;
   --ring: #2563eb;
   --radius: 0.75rem;
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(226, 232, 240, 0.8);
 }
 
 * {
@@ -66,7 +68,7 @@ h1, h2, h3, h4, .font-display {
 }
 
 .kaame-gradient {
-  background: linear-gradient(135deg, #2563eb 0%, #00e5ff 100%);
+  background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);
 }
 
 .kaame-gradient-alt {

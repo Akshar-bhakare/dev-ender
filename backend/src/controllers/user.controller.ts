@@ -14,7 +14,7 @@ export const getProfile = async (request: FastifyRequest, reply: FastifyReply) =
 
     // Get user's posts
     const posts = await Post.find({ author: user._id })
-      .populate('author', 'name uid email faceVerified kycStatus')
+      .populate('author', 'name uid email identityVerified kycStatus')
       .sort({ createdAt: -1 });
 
     return reply.send({
@@ -26,7 +26,7 @@ export const getProfile = async (request: FastifyRequest, reply: FastifyReply) =
         avatar: user.avatar,
         company: user.company,
         bio: user.bio,
-        faceVerified: user.faceVerified,
+        identityVerified: user.identityVerified,
         kycStatus: user.kycStatus,
         docData: user.docData,
         createdAt: user.createdAt
@@ -66,7 +66,7 @@ export const updateProfile = async (request: FastifyRequest, reply: FastifyReply
         avatar: user.avatar,
         company: user.company,
         bio: user.bio,
-        faceVerified: user.faceVerified,
+        identityVerified: user.identityVerified,
         kycStatus: user.kycStatus
       }
     });

@@ -4,11 +4,11 @@ import { useParams } from "next/navigation";
 import { KaaMeNavbar } from "@/components/kaa-me/KaaMeNavbar";
 import usersData from "@/mock-data/users.json";
 import { motion } from "framer-motion";
+// @ts-ignore
 import { ShieldCheck, MapPin, Link as LinkIcon, Calendar, Edit3, Save, TrendingUp } from "lucide-react";
 import { useState, useEffect } from "react";
 import { PostCard } from "@/components/kaa-me/PostCard";
 
-export default function ProfilePage() {
 export default function ProfilePage() {
   const params = useParams();
   const userId = params.userId as string;
