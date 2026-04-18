@@ -20,6 +20,6 @@ export const connectDB = async () => {
       console.error('Reason:', JSON.stringify(err.reason, null, 2));
     }
     // Exit process with failure
-    process.exit(1);
+    // process.exit(1);
   }
 };

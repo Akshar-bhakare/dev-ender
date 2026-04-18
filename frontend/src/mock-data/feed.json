@@ -30,6 +30,36 @@
     "timestamp": "5h ago"
   },
   {
+    "id": "p3",
+    "userId": "u2",
+    "type": "organic",
+    "content": "Just finished reading 'The Lean Startup' again. Even after all these years, the core principles of validated learning still hit hard. Ready to apply this to our next sprint!",
+    "image": "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&q=80&w=1200",
+    "likes": 856,
+    "comments": 42,
+    "timestamp": "1h ago"
+  },
+  {
+    "id": "p4",
+    "userId": "u1",
+    "type": "organic",
+    "content": "Excited to share that our team has successfully integrated the latest GPT-4o model into our customer support workflow. Seeing a 40% reduction in response times already!",
+    "image": "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80&w=1200",
+    "likes": 2100,
+    "comments": 112,
+    "timestamp": "30m ago"
+  },
+  {
+    "id": "p5",
+    "userId": "u3",
+    "type": "organic",
+    "content": "Nature is the best designer. Taking some time off to recharge in the mountains before we dive into the next big feature. Balance is key.",
+    "image": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=1200",
+    "likes": 1500,
+    "comments": 67,
+    "timestamp": "10m ago"
+  },
+  {
     "id": "job1",
     "type": "job_pulse",
     "title": "Staff Cloud Engineer",
