@@ -1,20 +1,44 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import dotenv from 'dotenv';
+import multipart from '@fastify/multipart';
+import fastifyRawBody from 'fastify-raw-body';
+import util from 'node:util';
+
+// Import custom routes
 import authRoutes from './routes/auth.routes.js';
 import postRoutes from './routes/post.routes.js';
 import userRoutes from './routes/user.routes.js';
+import { jobsRoutes } from './modules/jobs/jobs.routes.js';
+import { marketplaceRoutes } from './modules/marketplace/marketplace.routes.js';
+import { paymentsRoutes } from './modules/payments/payments.routes.js';
+import { trustRoutes } from './modules/trust/trust.routes.js';
+import { eventsRoutes } from './modules/events/events.routes.js';
+import { registrationsRoutes } from './modules/registrations/registrations.routes.js';
+import { reviewsRoutes } from './modules/reviews/reviews.routes.js';
+
 import { authenticate } from './middleware/auth.middleware.js';
 import { connectDB } from './config/db.js';
-import multipart from '@fastify/multipart';
-
 
 dotenv.config();
 
+// Better error reporting for Node 22 ESM
+process.on('unhandledRejection', (reason) => {
+  console.error('CRITICAL: Unhandled Rejection at:', util.inspect(reason, { depth: null, colors: true }));
+  process.exit(1);
+});
 
+process.on('uncaughtException', (err) => {
+  console.error('CRITICAL: Uncaught Exception:', util.inspect(err, { depth: null, colors: true }));
+  process.exit(1);
+});
 
-const fastify = Fastify({
-  logger: true
+const fastify = Fastify({ logger: true });
+
+// Register Raw Body (essential for Stripe Webhooks)
+fastify.register(fastifyRawBody, {
+  global: false, // We only need it for the webhook route
+  runFirst: true,
 });
 
 // Register Multipart plugin for file uploads
@@ -26,14 +50,25 @@ fastify.register(multipart, {
 
 // Register CORS
 fastify.register(cors, {
-  origin: process.env.FRONTEND_URL || '*'
+  origin: process.env.FRONTEND_URL || '*',
 });
 
-// Register health check route
-fastify.get('/health', async (request, reply) => {
-  return { status: 'ok', timestamp: new Date().toISOString() };
-});
+// Health check
+fastify.get('/health', async () => ({
+  status: 'ok',
+  timestamp: new Date().toISOString(),
+}));
 
+// ── Register feature modules ──────────────────────────────────
+fastify.register(jobsRoutes, { prefix: '/api/v1/jobs' });
+fastify.register(marketplaceRoutes, { prefix: '/api/v1/marketplace' });
+fastify.register(paymentsRoutes, { prefix: '/api/v1/payments' });
+fastify.register(trustRoutes, { prefix: '/api/v1/trust' });
+fastify.register(eventsRoutes, { prefix: '/api/v1/events' });
+fastify.register(registrationsRoutes, { prefix: '/api/v1/registrations' });
+fastify.register(reviewsRoutes, { prefix: '/api/v1/reviews' });
+
+// Auth & Social
 fastify.register(authRoutes, { prefix: '/api/auth' });
 fastify.register(postRoutes, { prefix: '/api/posts' });
 fastify.register(userRoutes, { prefix: '/api/users' });
@@ -46,12 +81,10 @@ fastify.get('/api/test', { preHandler: [authenticate] }, async (request, reply) 
 // Start the server
 const start = async () => {
   try {
-    // Connect to Database (Non-blocking for server start)
-    connectDB();
-    
+    await connectDB();
     const port = parseInt(process.env.PORT || '3001');
     await fastify.listen({ port, host: '0.0.0.0' });
-    console.log(`Server listening on http://localhost:${port}`);
+    console.log(`🚀 Server listening on http://localhost:${port}`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);

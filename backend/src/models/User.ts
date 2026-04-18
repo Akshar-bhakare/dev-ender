@@ -24,6 +24,11 @@ export interface IUser extends Document {
     nationality?: string;
     docType?: string;
   };
+  identityVerified: boolean;
+  totalEventsHosted: number;
+  avgRating: number;
+  cancellationsCount: number;
+  trustScore: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -85,7 +90,12 @@ const UserSchema = new Schema<IUser>(
       expiry: String,
       nationality: String,
       docType: String
-    }
+    },
+    identityVerified: { type: Boolean, default: false },
+    totalEventsHosted: { type: Number, default: 0 },
+    avgRating: { type: Number, default: 0, min: 0, max: 5 },
+    cancellationsCount: { type: Number, default: 0 },
+    trustScore: { type: Number, default: 0 }
   },
   { timestamps: true }
 );

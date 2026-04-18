@@ -7,6 +7,14 @@ export interface ICompany extends Document {
   description?: string;
   website?: string;
   logoUrl?: string;
+  locations: string[];
+  verifiedStatus: boolean;
+  verifiedLevel: number;
+  identityVerified: boolean;
+  totalEventsHosted: number;
+  avgRating: number;
+  cancellationsCount: number;
+  trustScore: number;
   admins: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
@@ -24,6 +32,14 @@ const CompanySchema = new Schema<ICompany>(
     description: { type: String, trim: true },
     website: { type: String, trim: true },
     logoUrl: { type: String },
+    locations: [{ type: String, trim: true }],
+    verifiedStatus: { type: Boolean, default: false },
+    verifiedLevel: { type: Number, default: 0, min: 0, max: 5 },
+    identityVerified: { type: Boolean, default: false },
+    totalEventsHosted: { type: Number, default: 0 },
+    avgRating: { type: Number, default: 0, min: 0, max: 5 },
+    cancellationsCount: { type: Number, default: 0 },
+    trustScore: { type: Number, default: 0 },
     admins: [{ type: Schema.Types.ObjectId, ref: 'User' }]
   },
   { timestamps: true }
