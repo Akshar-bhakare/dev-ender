@@ -1,11 +1,24 @@
 import Stripe from 'stripe';
 import { Event, Registration } from '../../models/index.js';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2025-01-27' as any, // Use latest stable
-});
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
+
+let stripe: Stripe | null = null;
+if (STRIPE_SECRET_KEY) {
+  stripe = new Stripe(STRIPE_SECRET_KEY, {
+    apiVersion: '2025-01-27' as any,
+  });
+} else {
+  console.warn('⚠️ STRIPE_SECRET_KEY is missing. Stripe features will be disabled.');
+}
 
 export class StripeService {
+  private static getStripe() {
+    if (!stripe) {
+      throw new Error('Stripe is not configured. Please add STRIPE_SECRET_KEY to your .env file.');
+    }
+    return stripe;
+  }
   /**
    * createCheckoutSession
    * 1. Check if event is free or paid.
@@ -29,7 +42,8 @@ export class StripeService {
       { upsert: true, new: true }
     );
 
-    const session = await stripe.checkout.sessions.create({
+    const stripeInstance = this.getStripe();
+    const session = await stripeInstance.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
         {
@@ -68,10 +82,10 @@ export class StripeService {
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
     if (!webhookSecret) throw new Error('STRIPE_WEBHOOK_SECRET not configured');
 
+    const stripeInstance = this.getStripe();
     let stripeEvent: Stripe.Event;
-
     try {
-      stripeEvent = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+      stripeEvent = stripeInstance.webhooks.constructEvent(payload, signature, webhookSecret);
     } catch (err: any) {
       throw new Error(`Webhook Error: ${err.message}`);
     }

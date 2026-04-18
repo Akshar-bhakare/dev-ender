@@ -18,31 +18,7 @@ function cosineSimilarity(vecA: number[], vecB: number[]) {
 
 export const register = async (request: FastifyRequest, reply: FastifyReply) => {
   try {
-    let email: string | undefined, password: string | undefined, name: string | undefined;
-    let role: string | undefined, nationality: string | undefined, docType: string | undefined;
-    let hasFace = false;
-
-    if (request.isMultipart()) {
-      const parts = request.parts();
-      for await (const part of parts) {
-        if (part.type === 'file') {
-          await part.toBuffer(); // drain buffer — no sidecar needed
-          if (part.fieldname === 'files') hasFace = true;
-        } else {
-          if (part.fieldname === 'email') email = part.value as string;
-          if (part.fieldname === 'password') password = part.value as string;
-          if (part.fieldname === 'name') name = part.value as string;
-          if (part.fieldname === 'role') role = part.value as string;
-          if (part.fieldname === 'nationality') nationality = part.value as string;
-          if (part.fieldname === 'docType') docType = part.value as string;
-        }
-      }
-    } else {
-      const body = request.body as any;
-      email = body.email; password = body.password;
-      name = body.name; role = body.role;
-      nationality = body.nationality; docType = body.docType;
-    }
+    const { name, email, password, role } = request.body as any;
 
     if (!email || !password || !name) {
       return reply.status(400).send({ message: 'Email, password, and name are required' });
@@ -54,22 +30,14 @@ export const register = async (request: FastifyRequest, reply: FastifyReply) => 
     }
 
     const passwordHash = await hashPassword(password);
-    const hasDoc = !!(nationality && docType);
 
     const user = new User({
-      email, name, passwordHash,
+      email, 
+      name, 
+      passwordHash,
       role: role || 'CANDIDATE',
-      faceVerified: hasFace,
-      kycStatus: hasDoc ? 'verified' : 'pending',
-      kycVerifiedAt: hasDoc ? new Date() : undefined,
-      docData: hasDoc ? {
-        name,
-        dob: '',
-        docNumber: hashString(`${email}-${docType}-${Date.now()}`),
-        expiry: '',
-        nationality,
-        docType
-      } : undefined
+      faceVerified: false,
+      kycStatus: 'pending'
     });
 
     await user.save();
@@ -77,16 +45,23 @@ export const register = async (request: FastifyRequest, reply: FastifyReply) => 
     await AuditLog.create({ uid: user.uid, action: 'register', ip: request.ip, timestamp: new Date() });
 
     const token = generateToken({
-      sub: user.uid, id: user._id, role: user.role,
-      face_verified: user.faceVerified, kyc: user.kycStatus
+      sub: user.uid, 
+      id: user._id, 
+      role: user.role,
+      face_verified: user.faceVerified, 
+      kyc: user.kycStatus
     });
 
     return reply.status(201).send({
       message: 'User registered successfully',
       token,
       user: {
-        id: user.uid, email: user.email, name: user.name,
-        role: user.role, faceVerified: user.faceVerified, kycStatus: user.kycStatus
+        id: user.uid, 
+        email: user.email, 
+        name: user.name,
+        role: user.role, 
+        faceVerified: user.faceVerified, 
+        kycStatus: user.kycStatus
       }
     });
   } catch (error) {

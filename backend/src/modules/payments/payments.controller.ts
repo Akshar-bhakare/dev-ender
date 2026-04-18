@@ -3,7 +3,7 @@ import { StripeService } from './stripe.service.js';
 
 export async function createCheckoutSessionHandler(request: FastifyRequest, reply: FastifyReply) {
   const { eventId } = request.body as { eventId: string };
-  const userId = request.user?.userId;
+  const userId = request.user?.sub;
 
   if (!userId) return reply.code(401).send({ error: 'Authentication required' });
 
@@ -32,7 +32,7 @@ export async function stripeWebhookHandler(request: FastifyRequest, reply: Fasti
 
 export async function createPayment(request: FastifyRequest, reply: FastifyReply) {
   const { eventId, amount } = request.body as { eventId: string, amount: number };
-  const userId = request.user?.userId;
+  const userId = request.user?.sub;
 
   if (!userId) return reply.code(401).send({ error: 'Authentication required' });
 

@@ -8,7 +8,7 @@ import usersData from "@/mock-data/users.json";
 import feedData from "@/mock-data/feed.json";
 import { Briefcase, Users, Star, TrendingUp, ShieldCheck, Zap, Image as ImageIcon, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 
 export default function FeedPage() {
   const router = useRouter();
@@ -191,7 +191,7 @@ export default function FeedPage() {
             <div className="space-y-2">
               {[
                 { label: "Upload Post", icon: Briefcase, action: scrollToPostInput },
-                { label: "Verify Identity", icon: ShieldCheck, action: () => router.push('/verify') },
+                { label: "Verify Identity", icon: ShieldCheck, action: () => router.push(`/profile/${currentUser?.uid || currentUser?.id}`) },
                 { label: "Find Partners", icon: Users },
                 { label: "Verified Events", icon: Star }
               ].map((item) => (
