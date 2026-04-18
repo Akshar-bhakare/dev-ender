@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: dev-clash-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - dev-clash-network
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: dev-clash-mongo-ui
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongodb
+    depends_on:
+      - mongodb
+    networks:
+      - dev-clash-network
+
+networks:
+  dev-clash-network:
+    driver: bridge
+
+volumes:
+  mongo-data:
