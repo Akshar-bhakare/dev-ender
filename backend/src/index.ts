@@ -1,36 +1,34 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import dotenv from 'dotenv';
-import { connectDB } from './config/db';
-
+import { connectDB } from './config/db.js';
+import { jobsRoutes } from './modules/jobs/jobs.routes.js';
 
 dotenv.config();
 
-
-
-const fastify = Fastify({
-  logger: true
-});
+const fastify = Fastify({ logger: true });
 
 // Register CORS
 fastify.register(cors, {
-  origin: process.env.FRONTEND_URL || '*'
+  origin: process.env.FRONTEND_URL || '*',
 });
 
-// Register health check route
-fastify.get('/health', async (request, reply) => {
-  return { status: 'ok', timestamp: new Date().toISOString() };
-});
+// Health check
+fastify.get('/health', async () => ({
+  status: 'ok',
+  timestamp: new Date().toISOString(),
+}));
+
+// ── Register feature modules ──────────────────────────────────
+fastify.register(jobsRoutes, { prefix: '/api/v1/jobs' });
 
 // Start the server
 const start = async () => {
   try {
-    // Connect to Database
     await connectDB();
-    
     const port = parseInt(process.env.PORT || '3001');
     await fastify.listen({ port, host: '0.0.0.0' });
-    console.log(`Server listening on http://localhost:${port}`);
+    console.log(`🚀 Server listening on http://localhost:${port}`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
