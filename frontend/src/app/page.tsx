@@ -58,14 +58,16 @@ export default function Home() {
             </div>
 
             <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-6">
-              <Link href="/feed">
+              <Link href="/register">
                 <button className="px-12 py-5 rounded-3xl kaame-gradient text-white font-display font-bold text-xl hover:scale-105 active:scale-95 transition-all shadow-2xl shadow-primary/40">
-                  Enter the Ecosystem
+                  Get Started
                 </button>
               </Link>
-              <button className="px-12 py-5 rounded-3xl border-2 border-slate-200 bg-white text-slate-500 font-display font-bold text-xl hover:bg-slate-50 hover:border-slate-300 transition-all">
-                Verify Identity
-              </button>
+              <Link href="/login">
+                <button className="px-12 py-5 rounded-3xl border-2 border-slate-200 bg-white text-slate-500 font-display font-bold text-xl hover:bg-slate-50 hover:border-slate-300 transition-all">
+                  Sign In
+                </button>
+              </Link>
             </div>
           </motion.div>
         </div>
