@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import Webcam from "react-webcam";
+import { FaceVerifier } from "@/components/auth/FaceVerifier";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -39,9 +39,28 @@ export const UserSteps = ({ onBack }: UserStepsProps) => {
   const [formData, setFormData] = useState({ ...defaultFormData, ...(saved?.formData || {}) });
   const [documentImageFront, setDocumentImageFront] = useState<string | null>(saved?.buffered?.step5?.documentImageBase64 || null);
   const [buffered, setBuffered] = useState<BufferedData>(saved?.buffered || {});
-  const webcamRef = useRef<Webcam>(null);
 
-  const saveProgress = (newStep: number, newFormData = formData, newBuffered = buffered) => {
+  const handleCancel = () => {
+    if (confirm("Cancel registration? All progress will be lost.")) {
+      clearProgress();
+      onBack();
+    }
+  };
+
+  const handleBack = () => {
+    if (step === 1) { onBack(); return; }
+    // Going back from step 2 resets to step 1 so user can change email and resend OTP
+    if (step === 2) {
+      setFormData(prev => ({ ...prev, emailOtp: "" }));
+      localStorage.removeItem("signupSessionToken");
+      saveProgress(1, { ...formData, emailOtp: "" });
+      setStep(1);
+      return;
+    }
+    const prev = step - 1;
+    saveProgress(prev);
+    setStep(prev);
+  };
     localStorage.setItem(SIGNUP_KEY, JSON.stringify({ step: newStep, formData: newFormData, buffered: newBuffered }));
   };
 
@@ -119,14 +138,10 @@ export const UserSteps = ({ onBack }: UserStepsProps) => {
     }
   };
 
-  const handleStep4Face = async () => {
-    if (!webcamRef.current) return;
-    const imageSrc = webcamRef.current.getScreenshot();
-    if (!imageSrc) return setError("Could not capture image from camera.");
+  const handleStep4Face = async (imageSrc: string) => {
     setLoading(true); setError(null);
     try {
       const res: any = await api.post("/auth/user/step4/face-verify", { faceImageBase64: imageSrc });
-      // Buffer face data locally, no DB write yet
       const newBuffered = { ...buffered, step4: { faceImageBase64: imageSrc, faceDescriptor: res.descriptor } };
       setBuffered(newBuffered);
       saveProgress(5, formData, newBuffered);
@@ -197,10 +212,15 @@ export const UserSteps = ({ onBack }: UserStepsProps) => {
       exit={{ opacity: 0, x: -50 }}
       className="max-w-md mx-auto w-full pb-20"
     >
-      <button onClick={onBack} className="text-slate-400 hover:text-slate-700 flex items-center gap-2 mb-8 transition-colors">
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-        Back
-      </button>
+      <div className="flex items-center justify-between mb-8">
+        <button onClick={handleBack} className="text-slate-400 hover:text-slate-700 flex items-center gap-2 transition-colors">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+          Back
+        </button>
+        <button onClick={handleCancel} className="text-xs text-slate-400 hover:text-red-500 transition-colors">
+          Cancel registration
+        </button>
+      </div>
 
       {/* Progress */}
       <div className="flex items-center gap-2 mb-8">
@@ -245,7 +265,7 @@ export const UserSteps = ({ onBack }: UserStepsProps) => {
       {step === 2 && (
         <form onSubmit={handleStep2} className="space-y-6">
           <h2 className="text-2xl font-display font-bold text-slate-900 mb-2">Verify your Email</h2>
-          <p className="text-slate-500 mb-6 font-medium text-sm">We've sent a code to {formData.email}.</p>
+          <p className="text-slate-500 mb-6 font-medium text-sm">We've sent a code to {formData.email}. <button type="button" onClick={handleBack} className="text-primary underline">Wrong email?</button></p>
           
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Email Verification Code</label>
@@ -306,25 +326,11 @@ export const UserSteps = ({ onBack }: UserStepsProps) => {
       {step === 4 && (
         <div className="space-y-6">
           <h2 className="text-2xl font-display font-bold text-slate-900 mb-2">Live Identity Verification</h2>
-          <p className="text-slate-500 mb-6 font-medium text-sm">Please position your face clearly in the frame. We use this to prevent bot networks and duplicate accounts.</p>
-          
-          <div className="relative w-full aspect-video bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border-4 border-slate-100 verification-glow">
-            <Webcam
-              audio={false}
-              ref={webcamRef}
-              screenshotFormat="image/jpeg"
-              videoConstraints={{ facingMode: "user" }}
-              className="object-cover w-full h-full"
-            />
-            {/* Overlay grid overlay */}
-            <div className="absolute inset-0 border-[40px] border-black/40 pointer-events-none rounded-2xl mix-blend-multiply flex items-center justify-center">
-                 <div className="w-[180px] h-[250px] border-2 border-primary/50 border-dashed rounded-full" />
-            </div>
-          </div>
-
-          <button disabled={loading} onClick={handleStep4Face} className="w-full mt-6 py-4 kaame-gradient text-white rounded-xl font-bold hover:opacity-90 disabled:opacity-50 transition-all hover:scale-[1.02]">
-            {loading ? "Analyzing Face..." : "Capture Face"}
-          </button>
+          <p className="text-slate-500 mb-4 font-medium text-sm">Position your face in the oval. We'll auto-capture when ready.</p>
+          <FaceVerifier onCapture={handleStep4Face} loading={loading} />
+          {error && (
+            <div className="p-3 text-sm text-red-500 bg-red-50 rounded-xl border border-red-100">{error}</div>
+          )}
         </div>
       )}
 

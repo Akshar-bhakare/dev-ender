@@ -80,8 +80,8 @@ fastify.register(authRoutes, { prefix: '/api/v1' });
 fastify.register(devRoutes, { prefix: '/api/v1' });
 fastify.register(adminRoutes, { prefix: '/api/v1' });
 
-fastify.register(postRoutes, { prefix: '/api/posts' });
-fastify.register(userRoutes, { prefix: '/api/users' });
+fastify.register(postRoutes, { prefix: '/api/v1/posts' });
+fastify.register(userRoutes, { prefix: '/api/v1/users' });
 
 // Protected test route
 fastify.get('/api/test', { preHandler: [requireAuth] }, async (request, reply) => {

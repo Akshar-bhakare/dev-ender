@@ -16,21 +16,23 @@ export class OtpService {
   static async sendEmailOtp(email: string, type: OtpType): Promise<void> {
     const otp = this.generateOtp();
     const otpHash = hashString(otp);
-
-    // Expire in 10 minutes
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-    await OtpRecord.create({
-      target: email,
-      otpHash,
-      type,
-      expiresAt
-    });
+    // Delete any previous unused OTPs for this target+type to avoid confusion
+    await OtpRecord.deleteMany({ target: email, type, used: false });
+
+    await OtpRecord.create({ target: email, otpHash, type, expiresAt });
 
     const subject = type === 'password_reset' ? 'Your SyncUp Password Reset Code' : 'Verify your SyncUp Email';
     const html = `<p>Your verification code is: <strong>${otp}</strong>. It expires in 10 minutes.</p>`;
 
-    await sendEmail(email, subject, html);
+    try {
+      await sendEmail(email, subject, html);
+    } catch (error) {
+      // Clean up the OTP record if email failed so user can retry
+      await OtpRecord.deleteMany({ target: email, type, used: false });
+      throw new Error('Failed to send verification email. Please try again.');
+    }
   }
 
   /**

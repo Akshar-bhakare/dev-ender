@@ -64,6 +64,15 @@ export interface IUser extends Document {
   // Token management
   refreshTokens: Array<{ token: string; expiresAt: Date }>;
 
+  // Social graph
+  following: Types.ObjectId[];
+  followers: Types.ObjectId[];
+  skills: string[];
+  education: Array<{ school: string; degree: string; field: string; startYear: number; endYear?: number }>;
+  experience: Array<{ title: string; company: string; startYear: number; endYear?: number; current: boolean; description?: string }>;
+  location?: string;
+  website?: string;
+
   // Legacy fields (backward compat with existing code)
   name?: string; // alias for fullName
   company?: string;
@@ -136,7 +145,22 @@ const UserSchema = new Schema<IUser>(
     // Tokens
     refreshTokens: [{ token: { type: String }, expiresAt: { type: Date } }],
 
-    // Legacy fields
+    // Social graph
+    following: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    followers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    skills: [{ type: String }],
+    education: [{
+      school: String, degree: String, field: String,
+      startYear: Number, endYear: Number
+    }],
+    experience: [{
+      title: String, company: String,
+      startYear: Number, endYear: Number,
+      current: { type: Boolean, default: false },
+      description: String
+    }],
+    location: { type: String },
+    website: { type: String },
     company: { type: String },
     kycStatus: { type: String, enum: ['pending', 'verified', 'rejected'], default: 'pending' },
     kycVerifiedAt: { type: Date },
