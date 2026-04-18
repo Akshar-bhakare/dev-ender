@@ -1,0 +1,29 @@
+[
+  {
+    "id": "j1",
+    "title": "Principal Design Engineer",
+    "company": "KaaMe Core",
+    "type": "Remote / Full-time",
+    "salary": "$180k - $240k",
+    "verified": true,
+    "logo": "https://images.unsplash.com/photo-1549923746-c50264f39a1d?q=80&w=2370&auto=format&fit=crop"
+  },
+  {
+    "id": "j2",
+    "title": "Head of Strategic Growth",
+    "company": "AlphaFoundry",
+    "type": "New York / Hybrid",
+    "salary": "$200k + Equity",
+    "verified": true,
+    "logo": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2370&auto=format&fit=crop"
+  },
+  {
+    "id": "j3",
+    "title": "Lead Security Researcher",
+    "company": "LockState",
+    "type": "London / On-site",
+    "salary": "£120k - £160k",
+    "verified": true,
+    "logo": "https://images.unsplash.com/photo-1551836022-d5d88e9218df?q=80&w=2370&auto=format&fit=crop"
+  }
+]

@@ -1,0 +1,40 @@
+[
+  {
+    "id": "p1",
+    "userId": "u1",
+    "type": "organic",
+    "content": "Just finalized the new architecture for our decentralized neural engine. Scalability is no longer the bottleneck. The future is distributed.",
+    "image": "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&q=80&w=1200",
+    "likes": 1240,
+    "comments": 89,
+    "timestamp": "2h ago"
+  },
+  {
+    "id": "ad1",
+    "type": "sponsored",
+    "headline": "Elevate Your Workspace with Minimalist Hardware",
+    "brand": "SleekTech",
+    "content": "Discover the new generation of keyboards designed for engineers by engineers. Tactile feedback satisfies the soul.",
+    "image": "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&q=80&w=1200",
+    "cta": "Explore Now",
+    "timestamp": "Sponsored"
+  },
+  {
+    "id": "p2",
+    "userId": "u3",
+    "type": "organic",
+    "content": "Building a zero-waste company isn't just about the product; it's about the entire lifecycle. Proud to announce our B-Corp certification today!",
+    "image": "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&q=80&w=1200",
+    "likes": 3402,
+    "comments": 156,
+    "timestamp": "5h ago"
+  },
+  {
+    "id": "job1",
+    "type": "job_pulse",
+    "title": "Staff Cloud Engineer",
+    "company": "KaaMe",
+    "salary": "$180k - $240k",
+    "location": "Remote / London"
+  }
+]
