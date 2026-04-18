@@ -105,3 +105,127 @@ export const getEventDetail = async (request: FastifyRequest, reply: FastifyRepl
 export const getUploadSignature = async (request: FastifyRequest, reply: FastifyReply) => {
   return reply.send({ success: true, data: generateUploadSignature() });
 };
+
+export const calculateRisk = async (request: FastifyRequest, reply: FastifyReply) => {
+  const params = request.params as { eventId: string };
+  try {
+    const event = await EventService.getEventBySlugOrId(params.eventId);
+    let organizerTrustScore = event.trustScore || 0; // In a real app we might fetch user/company trustScore here
+    
+    // Simulate fetching organizer trust score if we need to dynamically calculate
+    // const User = mongoose.model('User');
+    // const org = await User.findById(event.organizerUserId);
+    // organizerTrustScore = org?.trustScore || 0;
+
+    let eventScore = organizerTrustScore;
+    eventScore += event.venueVerified ? 10 : -10;
+    eventScore += (event.ticketPrice && event.ticketPrice > 2000) ? -10 : 5;
+
+    let decisionStatus = 'pending_approval';
+    if (eventScore > 60) decisionStatus = 'published';
+    else if (eventScore < 30) decisionStatus = 'blocked';
+
+    event.status = decisionStatus as any;
+    
+    // Have to bypass the Mongoose validation dynamically by just letting the mock save if needed.
+    // Assuming EventService doesn't export save, we'll use findOneAndUpdate directly or via service
+    // For demo:
+    const { EventModel } = await import('./events.schema.js');
+    await EventModel.findByIdAndUpdate(event._id, { status: decisionStatus, trustScore: eventScore });
+
+    return reply.send({
+      success: true,
+      eventScore,
+      decision: decisionStatus
+    });
+  } catch (err) {
+    return handleError(err, request, reply);
+  }
+};
+
+export const reportEvent = async (request: FastifyRequest, reply: FastifyReply) => {
+  const params = request.params as { eventId: string };
+  try {
+    const event = await EventService.getEventBySlugOrId(params.eventId);
+    const { EventModel } = await import('./events.schema.js');
+    
+    let reportCount = (event.reportCount || 0) + 1;
+    let flagged = event.flagged;
+    let status = event.status;
+    let payoutStatus = event.payoutStatus;
+
+    if (reportCount >= 3) flagged = true;
+    if (reportCount >= 10) {
+      status = 'hidden' as any;
+      payoutStatus = 'FROZEN';
+    }
+
+    await EventModel.findByIdAndUpdate(event._id, { 
+      reportCount, 
+      flagged, 
+      status, 
+      payoutStatus 
+    });
+
+    return reply.send({ success: true, data: { reportCount, flagged, status, payoutStatus } });
+  } catch (err) {
+    return handleError(err, request, reply);
+  }
+};
+
+export const getTrustSummary = async (request: FastifyRequest, reply: FastifyReply) => {
+  const params = request.params as { eventId: string };
+  try {
+    const event = await EventService.getEventBySlugOrId(params.eventId);
+    // In a real app we query the User/Company to get verified status
+    // For demo, we mock or fetch 
+    const { User } = await import('../../models/User.js');
+    const organizer = await User.findById(event.organizerUserId) as any;
+    
+    return reply.send({
+      success: true,
+      data: {
+        organizerVerified: organizer?.identityVerified || false,
+        pastEvents: organizer?.totalEventsHosted || 0,
+        avgRating: organizer?.avgRating || 0,
+        venueVerified: event.venueVerified || false,
+        escrowProtected: true // Enforced architecture
+      }
+    });
+  } catch (err) {
+    return handleError(err, request, reply);
+  }
+};
+
+export const calculateRefund = async (request: FastifyRequest, reply: FastifyReply) => {
+  const params = request.params as { eventId: string };
+  try {
+    const event = await EventService.getEventBySlugOrId(params.eventId);
+    
+    const now = new Date();
+    const eventDate = new Date(event.startDateTime);
+    const diffTime = eventDate.getTime() - now.getTime();
+    const daysBeforeEvent = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    let refundPercentage = 0;
+    if (daysBeforeEvent > 7) {
+      refundPercentage = 100;
+    } else if (daysBeforeEvent > 3) {
+      refundPercentage = 50;
+    } else {
+      refundPercentage = 0;
+    }
+
+    const ticketPrice = event.ticketPrice || 0;
+    const refundAmount = (ticketPrice * refundPercentage) / 100;
+
+    return reply.send({
+      success: true,
+      refundPercentage,
+      refundAmount
+    });
+  } catch (err) {
+    return handleError(err, request, reply);
+  }
+};
+

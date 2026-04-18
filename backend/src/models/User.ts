@@ -5,6 +5,11 @@ export interface IUser extends Document {
   passwordHash: string;
   role: 'user' | 'admin';
   status: 'active' | 'suspended' | 'deleted';
+  identityVerified: boolean;
+  totalEventsHosted: number;
+  avgRating: number;
+  cancellationsCount: number;
+  trustScore: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -29,7 +34,12 @@ const UserSchema = new Schema<IUser>(
       type: String,
       enum: ['active', 'suspended', 'deleted'],
       default: 'active'
-    }
+    },
+    identityVerified: { type: Boolean, default: false },
+    totalEventsHosted: { type: Number, default: 0 },
+    avgRating: { type: Number, default: 0, min: 0, max: 5 },
+    cancellationsCount: { type: Number, default: 0 },
+    trustScore: { type: Number, default: 0 }
   },
   { timestamps: true }
 );

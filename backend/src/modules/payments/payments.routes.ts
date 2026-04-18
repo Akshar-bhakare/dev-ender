@@ -2,7 +2,12 @@ import { FastifyInstance } from 'fastify';
 import { requireAuth } from '../../middleware/auth.js';
 import { 
   createCheckoutSessionHandler, 
-  stripeWebhookHandler 
+  stripeWebhookHandler,
+  createPayment,
+  releasePayout,
+  refundPayment,
+  freezePayout,
+  releaseMilestone
 } from './payments.controller.js';
 
 export async function paymentsRoutes(fastify: FastifyInstance) {
@@ -19,4 +24,11 @@ export async function paymentsRoutes(fastify: FastifyInstance) {
     },
     handler: stripeWebhookHandler
   });
+
+  // Escrow Lifecycle endpoints
+  fastify.post('/create', { preHandler: requireAuth, handler: createPayment });
+  fastify.post('/release', { preHandler: requireAuth, handler: releasePayout });
+  fastify.post('/refund', { preHandler: requireAuth, handler: refundPayment });
+  fastify.post('/freeze', { preHandler: requireAuth, handler: freezePayout });
+  fastify.post('/release-milestone', { preHandler: requireAuth, handler: releaseMilestone });
 }

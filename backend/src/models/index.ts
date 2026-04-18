@@ -19,3 +19,4 @@ export * from './Proposal.js';
 export * from './Contract.js';
 export * from './Milestone.js';
 export * from './MarketplaceRating.js';
+export * from './Payment.js';

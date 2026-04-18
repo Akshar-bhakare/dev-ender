@@ -60,6 +60,17 @@ export interface IEvent extends Document {
   averageRating: number;
   reviewCount: number;
   viewCount: number;
+  trustScore: number;
+  venueVerified: boolean;
+  reportCount: number;
+  flagged: boolean;
+  hidden: boolean;
+  payoutStatus: 'LOCKED' | 'PARTIAL_RELEASED' | 'RELEASED' | 'FROZEN';
+  cancellationPolicy: {
+    before7Days: string;
+    before3Days: string;
+    before48Hours: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -103,7 +114,7 @@ const EventSchema = new Schema<IEvent>(
     registrationDeadline: { type: Date },
     status: {
       type: String,
-      enum: ['draft', 'published', 'ongoing', 'completed', 'cancelled'],
+      enum: ['draft', 'published', 'ongoing', 'completed', 'cancelled', 'pending_approval', 'blocked', 'hidden'],
       default: 'draft',
     },
     isBoosted: { type: Boolean, default: false },
@@ -114,6 +125,21 @@ const EventSchema = new Schema<IEvent>(
     averageRating: { type: Number, default: 0 },
     reviewCount: { type: Number, default: 0 },
     viewCount: { type: Number, default: 0 },
+    trustScore: { type: Number, default: 0 },
+    venueVerified: { type: Boolean, default: false },
+    reportCount: { type: Number, default: 0 },
+    flagged: { type: Boolean, default: false },
+    hidden: { type: Boolean, default: false },
+    payoutStatus: {
+      type: String,
+      enum: ['LOCKED', 'PARTIAL_RELEASED', 'RELEASED', 'FROZEN'],
+      default: 'LOCKED',
+    },
+    cancellationPolicy: {
+      before7Days: { type: String, default: 'FULL_REFUND' },
+      before3Days: { type: String, default: 'HALF_REFUND' },
+      before48Hours: { type: String, default: 'NO_REFUND' }
+    }
   },
   { timestamps: true }
 );

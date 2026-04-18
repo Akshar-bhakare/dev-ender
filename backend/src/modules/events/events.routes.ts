@@ -13,4 +13,9 @@ export async function eventsRoutes(fastify: FastifyInstance) {
   fastify.get('/search', EventsController.searchEvents);
   fastify.get('/:slugOrId', EventsController.getEventDetail);
   fastify.post('/banner-upload', { preHandler: [requireAuth] }, EventsController.getUploadSignature);
+  
+  fastify.post('/:eventId/calculate-risk', { preHandler: [requireAuth] }, EventsController.calculateRisk);
+  fastify.post('/:eventId/report', { preHandler: [requireAuth] }, EventsController.reportEvent);
+  fastify.get('/:eventId/trust-summary', EventsController.getTrustSummary);
+  fastify.post('/:eventId/calculate-refund', { preHandler: [requireAuth] }, EventsController.calculateRefund);
 }
