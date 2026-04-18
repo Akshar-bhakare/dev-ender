@@ -8,6 +8,8 @@ export interface IEvent extends Document {
   date: Date;
   locationType: 'online' | 'physical';
   linkOrAddress?: string;
+  price: number;
+  currency: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,7 +26,9 @@ const EventSchema = new Schema<IEvent>(
       enum: ['online', 'physical'],
       required: true
     },
-    linkOrAddress: { type: String }
+    linkOrAddress: { type: String },
+    price: { type: Number, default: 0 },
+    currency: { type: String, default: 'USD' }
   },
   { timestamps: true }
 );

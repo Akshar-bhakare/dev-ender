@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "cross-env NODE_OPTIONS=\"--loader ts-node/esm --no-warnings\" nodemon --watch src --ext ts --exec node src/index.ts",
+    "dev": "nodemon --watch src --ext ts --exec tsx src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -20,9 +20,11 @@
     "@types/jsonwebtoken": "^9.0.10",
     "dotenv": "^17.4.2",
     "fastify": "^5.8.5",
+    "fastify-raw-body": "^5.0.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.4.1",
     "nanoid": "^5.1.9",
+    "stripe": "^22.0.2",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -31,6 +33,7 @@
     "cross-env": "^10.1.0",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "^6.0.3"
   }
 }

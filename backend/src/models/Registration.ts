@@ -4,6 +4,9 @@ export interface IRegistration extends Document {
   event: Types.ObjectId;
   user: Types.ObjectId;
   status: 'going' | 'maybe';
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
+  stripeSessionId?: string;
+  amountPaid?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -16,7 +19,14 @@ const RegistrationSchema = new Schema<IRegistration>(
       type: String,
       enum: ['going', 'maybe'],
       required: true
-    }
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['pending', 'paid', 'failed', 'refunded'],
+      default: 'pending'
+    },
+    stripeSessionId: { type: String },
+    amountPaid: { type: Number }
   },
   { timestamps: true }
 );
