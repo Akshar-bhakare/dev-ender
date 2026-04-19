@@ -73,18 +73,18 @@ export function requireCompanyRole(
 }
 
 /**
- * requireFaceVerified — preHandler for endpoints requiring face verification.
+ * requireIdentityVerified — preHandler for endpoints requiring identity verification.
  */
-export async function requireFaceVerified(
+export async function requireIdentityVerified(
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
-  if (!request.user?.faceVerified) {
+  if (!request.user?.identityVerified) {
     reply.code(403).send({
       success: false,
       error: {
-        code: 'USER_NOT_FACE_VERIFIED',
-        message: 'Face verification is required to perform this action.',
+        code: 'USER_NOT_IDENTITY_VERIFIED',
+        message: 'Identity verification is required to perform this action.',
       },
     });
   }

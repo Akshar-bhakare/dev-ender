@@ -25,7 +25,7 @@ export const registerForEvent = async (eventId: string, userId: string, promoCod
   let status: 'confirmed' | 'waitlisted' | 'pending_payment' = 'confirmed';
   
   // Capacity Check
-  if (event.registrationCount >= event.maxAttendees) {
+  if ((event.registrationCount ?? 0) >= (event.maxAttendees ?? Infinity)) {
     if (!event.waitlistEnabled) {
       throw new EventError(ERROR_CODES.AT_CAPACITY, 'Event is at full capacity');
     }
@@ -80,7 +80,7 @@ export const registerForEvent = async (eventId: string, userId: string, promoCod
     await registration.save();
     
     if (status === 'confirmed') {
-      event.registrationCount += 1;
+      event.registrationCount = (event.registrationCount ?? 0) + 1;
       await event.save();
       
       if (appliedPromo) {
@@ -117,7 +117,7 @@ export const handleRazorpayWebhook = async (payload: any) => {
 
     const event = await EventModel.findById(registration.eventId);
     if (event) {
-      event.registrationCount += 1;
+      event.registrationCount = (event.registrationCount ?? 0) + 1;
       await event.save();
       await updatePayoutEscrow(event._id as Types.ObjectId, event.organizerUserId as Types.ObjectId, registration.amountPaid || 0);
     }
@@ -180,7 +180,7 @@ export const handleEventCancellationPayouts = async (eventId: string) => {
 
 export const checkInAttendee = async (qrCodeToken: string, eventId: string, organizerUserId: string) => {
   const event = await EventModel.findById(eventId);
-  if (!event || event.organizerUserId.toString() !== organizerUserId) {
+  if (!event || (event.organizerUserId?.toString() ?? '') !== organizerUserId) {
     throw new EventError(ERROR_CODES.UNAUTHORIZED, 'Not authorized for this event');
   }
 
@@ -200,7 +200,7 @@ export const checkInAttendee = async (qrCodeToken: string, eventId: string, orga
 
 export const createPromoCode = async (data: any, eventId: string, userId: string) => {
   const event = await EventModel.findById(eventId);
-  if (!event || event.organizerUserId.toString() !== userId) throw new EventError(ERROR_CODES.UNAUTHORIZED, 'Not authorized');
+  if (!event || (event.organizerUserId?.toString() ?? '') !== userId) throw new EventError(ERROR_CODES.UNAUTHORIZED, 'Not authorized');
 
   const promo = new EventPromoCode({
     ...data,

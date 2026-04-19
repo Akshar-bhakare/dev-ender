@@ -12,6 +12,7 @@ import {
   Skill,
   type ApplicationStage,
 } from './jobs.schema.js';
+import { Company } from '../../models/Company.js';
 import { jobError } from './jobs.errors.js';
 import type {
   CreateJobInput,
@@ -50,9 +51,10 @@ export class JobsService {
    * Only verified companies can post.
    */
   static async createListing(companyId: string, userId: string, data: CreateJobInput) {
-    // In a real implementation: check Company.verificationStatus === 'verified'
-    // Skipping the DB check here since Company model doesn't have verificationStatus yet.
-    // This check must be done in controller once Company model is updated.
+    const company = await Company.findById(companyId);
+    if (!company || (company.verificationStatus !== 'verified' && !company.identityVerified)) {
+      throw jobError.companyNotVerified();
+    }
 
     const listing = new JobListing({
       companyId: new Types.ObjectId(companyId),
@@ -390,11 +392,11 @@ export class JobsService {
   static async applyToJob(
     jobId: string,
     applicantId: string,
-    faceVerified: boolean,
+    identityVerified: boolean,
     totalExperienceMonths: number,
     data: ApplyToJobInput
   ) {
-    if (!faceVerified) throw jobError.notFaceVerified();
+    if (!identityVerified) throw jobError.notIdentityVerified();
     if (totalExperienceMonths < 12) throw jobError.insufficientExperience();
 
     const listing = await JobListing.findOne({ _id: jobId, status: 'published', deletedAt: null });
@@ -434,8 +436,8 @@ export class JobsService {
   /**
    * Save a job.
    */
-  static async saveJob(userId: string, jobId: string, faceVerified: boolean) {
-    if (!faceVerified) throw jobError.notFaceVerified();
+  static async saveJob(userId: string, jobId: string, identityVerified: boolean) {
+    if (!identityVerified) throw jobError.notIdentityVerified();
 
     const listing = await JobListing.findOne({ _id: jobId, status: 'published', deletedAt: null });
     if (!listing) throw jobError.notFound();

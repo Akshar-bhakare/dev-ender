@@ -1,21 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { usePathname } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const KaaMeNavbar = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const { isAuthenticated, logout, isLoading, user } = useAuth();
+  const pathname = usePathname();
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
-    if (token && user) {
-      setIsLoggedIn(true);
-      setCurrentUser(JSON.parse(user));
-    }
-  }, []);
+  // Hide navbar on auth pages
+  if (pathname === "/login" || pathname === "/register") {
+    return null;
+  }
 
   return (
     <nav className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 py-4 flex items-center justify-between overflow-hidden">
@@ -44,49 +41,62 @@ export const KaaMeNavbar = () => {
             <Link
               key={item.label}
               href={item.href}
-              className="text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors relative group"
+              className={`text-sm font-bold transition-colors relative group ${pathname === item.href ? 'text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
             >
               {item.label}
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-cyan-500 transition-all group-hover:w-full" />
+              <span className={`absolute -bottom-1 left-0 h-0.5 bg-cyan-500 transition-all ${pathname === item.href ? 'w-full' : 'w-0 group-hover:w-full'}`} />
             </Link>
           ))}
         </div>
       </div>
 
       <div className="flex items-center gap-4 relative">
-        {isLoggedIn ? (
-          <Link href={`/profile/${currentUser?.uid || currentUser?.id}`}>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              className="flex items-center gap-3 px-4 py-2 bg-slate-50 rounded-2xl border border-slate-100 cursor-pointer"
-            >
-              <div className="w-8 h-8 rounded-lg overflow-hidden bg-white border border-slate-100">
-                <img src={currentUser?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.name}`} alt="me" className="w-full h-full object-cover" />
-              </div>
-              <span className="text-sm font-bold text-slate-900">{currentUser?.name?.split(' ')[0]}</span>
-            </motion.div>
-          </Link>
-        ) : (
-          <>
-            <Link href="/login">
+        {!isLoading && (
+          isAuthenticated ? (
+            <div className="flex items-center gap-4">
+               <Link href={`/profile/${user?._id}`}>
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  className="flex items-center gap-3 px-3 py-1.5 bg-slate-50 rounded-2xl border border-slate-100 cursor-pointer"
+                >
+                  <div className="w-7 h-7 rounded-lg overflow-hidden bg-white border border-slate-100">
+                    <img src={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.fullName || 'User'}`} alt="me" className="w-full h-full object-cover" />
+                  </div>
+                  <span className="text-sm font-bold text-slate-900 hidden sm:inline">{user?.fullName?.split(' ')[0]}</span>
+                </motion.div>
+              </Link>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="px-4 py-2 text-sm font-bold text-slate-600 hover:text-slate-900"
+                onClick={logout}
+                className="px-3 py-2 text-sm font-semibold text-slate-500 hover:text-red-500 transition-colors flex items-center gap-1.5"
               >
-                Sign In
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                <span className="hidden sm:inline">Sign Out</span>
               </motion.button>
-            </Link>
-            <Link href="/register">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="px-6 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-2xl shadow-xl shadow-slate-900/10 hover:bg-slate-800 transition-all"
-              >
-                Create Account
-              </motion.button>
-            </Link>
-          </>
+            </div>
+          ) : (
+            <>
+              <Link href="/login">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-4 py-2 text-sm font-bold text-slate-600 hover:text-slate-900"
+                >
+                  Sign In
+                </motion.button>
+              </Link>
+              <Link href="/register">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-6 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-2xl shadow-xl shadow-slate-900/10 hover:bg-slate-800 transition-all"
+                >
+                  Get Verified
+                </motion.button>
+              </Link>
+            </>
+          )
         )}
       </div>
     </nav>

@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { requireAuth } from '../../middleware/auth.js';
+import { requireAuth } from '../../middleware/auth.middleware.js';
 import { 
   createCheckoutSessionHandler, 
   stripeWebhookHandler,

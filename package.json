@@ -25,5 +25,8 @@
   "homepage": "https://github.com/Akshar-bhakare/dev-ender#readme",
   "devDependencies": {
     "concurrently": "^9.2.1"
+  },
+  "dependencies": {
+    "debug": "^4.4.3"
   }
 }
