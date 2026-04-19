@@ -15,6 +15,7 @@ export const CompanySteps = ({ onBack }: CompanyStepsProps) => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [onfidoToken, setOnfidoToken] = useState<string | null>(null);
   const { login } = useAuth();
   const router = useRouter();
 
@@ -33,12 +34,15 @@ export const CompanySteps = ({ onBack }: CompanyStepsProps) => {
     industry: "",
     companySize: "1-10",
     yearFounded: new Date().getFullYear().toString(),
+    country: "IN",
+    ownershipPercentage: "",
+    founderStatement: "",
   });
 
   const [documentImageFrontend, setDocumentImageFrontend] = useState<string | null>(null);
   const webcamRef = useRef<Webcam>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
@@ -51,6 +55,7 @@ export const CompanySteps = ({ onBack }: CompanyStepsProps) => {
         email: formData.email,
         password: formData.password,
         phone: formData.phone,
+        country: formData.country,
         representativeRole: formData.representativeRole
       });
       localStorage.setItem("signupSessionToken", res.signupSessionToken);
@@ -66,10 +71,11 @@ export const CompanySteps = ({ onBack }: CompanyStepsProps) => {
     e.preventDefault();
     setLoading(true); setError(null);
     try {
-      await api.post("/auth/company/step2/verify-otp", {
+      const res: any = await api.post("/auth/company/step2/verify-otp", {
         emailOtp: formData.emailOtp,
         phoneOtp: formData.phoneOtp
       });
+      if (res.onfidoSdkToken) setOnfidoToken(res.onfidoSdkToken);
       setStep(3);
     } catch (err: any) {
       setError(err.response?.data?.error?.message || "Invalid OTP");
@@ -82,7 +88,7 @@ export const CompanySteps = ({ onBack }: CompanyStepsProps) => {
     e.preventDefault();
     setLoading(true); setError(null);
     try {
-      await api.post("/auth/company/step3/details", {
+      await api.post("/auth/company/step3/branding", {
         displayName: formData.displayName,
         websiteUrl: formData.websiteUrl,
         linkedInUrl: formData.linkedInUrl,
@@ -135,32 +141,48 @@ export const CompanySteps = ({ onBack }: CompanyStepsProps) => {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setDocumentImageFrontend(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+  const [docs, setDocs] = useState({
+    incorporation_cert: null as string | null,
+    gst_cert: null as string | null,
+    business_pan: null as string | null,
+  });
+
+  const [ocrResults, setOcrResults] = useState<any[]>([]);
+
+  const handleDocUpload = async (docType: string, imageBase64: string) => {
+    setLoading(true); setError(null);
+    try {
+      const res: any = await api.post("/auth/company/step5/documents", {
+        docType,
+        documentImageBase64: imageBase64
+      });
+      setOcrResults(prev => [...prev, { type: docType, ...res.extracted }]);
+      setDocs(prev => ({ ...prev, [docType]: imageBase64 }));
+    } catch (err: any) {
+      setError(err.response?.data?.error?.message || "OCR Verification failed");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleStep6Doc = async (e: React.FormEvent) => {
+  const handleFinalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!documentImageFrontend) return setError("Please upload registration document");
+    if (!docs.incorporation_cert) return setError("Certificate of Incorporation is mandatory");
 
     setLoading(true); setError(null);
     try {
       await api.post("/auth/company/step6/ownership", {
-        documentImageBase64: documentImageFrontend
+        representativeRole: formData.representativeRole,
+        ownershipPercentage: formData.ownershipPercentage,
+        founderStatement: formData.founderStatement,
+        linkedInUrl: formData.linkedInUrl
       });
       
-      const completeRes: any = await api.post("/auth/company/complete");
+      const completeRes: any = await api.get("/auth/get-me");
       login(completeRes);
-      router.push("/feed"); // Or company dashboard
+      router.push("/feed");
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || "Document verification failed");
+      setError(err.response?.data?.error?.message || "Final submission failed");
     } finally {
       setLoading(false);
     }
@@ -214,17 +236,21 @@ export const CompanySteps = ({ onBack }: CompanyStepsProps) => {
              </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Your Role</label>
-            <select name="representativeRole" value={formData.representativeRole} onChange={handleChange} className="w-full p-3 rounded-xl border border-slate-200 focus:border-accent bg-white outline-none">
-               <option value="founder">Founder</option>
-               <option value="co_founder">Co-Founder</option>
-               <option value="ceo">CEO</option>
-               <option value="director">Director</option>
-               <option value="authorized_rep">Authorized Representative</option>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Registered Country</label>
+            <select name="country" value={formData.country} onChange={handleChange} className="w-full p-3 rounded-xl border border-slate-200 focus:border-accent bg-white outline-none">
+              <option value="IN">India</option>
+              <option value="US">United States</option>
+              <option value="GB">United Kingdom</option>
+              <option value="AE">United Arab Emirates</option>
+              <option value="SG">Singapore</option>
+              <option value="DE">Germany</option>
+              <option value="FR">France</option>
+              <option value="CA">Canada</option>
+              <option value="AU">Australia</option>
             </select>
           </div>
 
-          <button disabled={loading} type="submit" className="w-full mt-6 py-4 bg-slate-900 text-white rounded-xl font-bold hover:opacity-90 disabled:opacity-50 transition-all">
+          <button disabled={loading} type="submit" className="w-full mt-6 py-4 kaame-gradient-alt text-white rounded-xl font-bold hover:shadow-lg transition-all">
             {loading ? "Creating..." : "Continue"}
           </button>
         </form>
@@ -244,7 +270,7 @@ export const CompanySteps = ({ onBack }: CompanyStepsProps) => {
             <input required name="phoneOtp" value={formData.phoneOtp} onChange={handleChange} className="w-full p-3 text-center tracking-widest text-lg font-mono rounded-xl border border-slate-200 focus:border-accent outline-none" placeholder="123456" maxLength={6} />
           </div>
 
-          <button disabled={loading} type="submit" className="w-full mt-6 py-4 bg-slate-900 text-white rounded-xl font-bold hover:opacity-90 disabled:opacity-50 transition-all">
+          <button disabled={loading} type="submit" className="w-full mt-6 py-4 kaame-gradient-alt text-white rounded-xl font-bold hover:shadow-lg transition-all">
              Verify
           </button>
         </form>
@@ -329,25 +355,98 @@ export const CompanySteps = ({ onBack }: CompanyStepsProps) => {
       )}
 
       {step === 6 && (
-        <form onSubmit={handleStep6Doc} className="space-y-6">
-          <h2 className="text-2xl font-display font-bold text-slate-900 mb-2">Business Registration</h2>
-          <p className="text-slate-500 mb-6 font-medium text-sm">Upload a valid business registration document (e.g. Certificate of Incorporation, GST, PAN).</p>
-          
-          <div className="w-full border-2 border-dashed border-slate-300 rounded-2xl p-8 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer relative overflow-hidden group">
-            <input type="file" accept="image/*" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-            
-            {documentImageFrontend ? (
-              <img src={documentImageFrontend} className="absolute inset-0 w-full h-full object-cover z-0 opacity-50" />
-            ) : null}
-
-            <div className="z-10 bg-white shadow-sm p-4 rounded-full mb-3 group-hover:scale-110 transition-transform">
-               <svg className="w-6 h-6 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
-            </div>
-            <p className="z-10 font-medium text-slate-700">Upload Registration Document</p>
+        <form onSubmit={handleFinalSubmit} className="space-y-6">
+          <div className="mb-6 text-center">
+            <h2 className="text-2xl font-display font-bold text-slate-900 mb-1">Ownership & Compliance</h2>
+            <p className="text-slate-500 font-medium text-sm">International validation and ownership verification.</p>
           </div>
 
-          <button disabled={loading} type="submit" className="w-full mt-6 py-4 bg-slate-900 text-white rounded-xl font-bold flex justify-center">
-             {loading ? <span className="animate-pulse">Running OCR Checks...</span> : "Complete Setup"}
+          <div className="space-y-4">
+            {onfidoToken ? (
+              <div className="p-8 rounded-2xl bg-blue-50 border border-blue-100 flex flex-col items-center">
+                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm">
+                   <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                </div>
+                <h3 className="text-base font-bold text-slate-800">Automated Registry Verification</h3>
+                <p className="text-center text-xs text-slate-500 mt-1 mb-4">We will verify {formData.legalName} against {formData.country} registries.</p>
+                <button type="button" onClick={() => setDocs({...docs, business_pan: "onfido_automated_check"})} className="py-3 px-6 kaame-gradient text-white rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition-all">
+                   {docs.business_pan ? "Check Initiated" : "Start Registry Lookup"}
+                </button>
+              </div>
+            ) : null}
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Your Ownership (%)</label>
+              <input name="ownershipPercentage" value={formData.ownershipPercentage} onChange={handleChange} placeholder="e.g. 51" className="w-full p-3 rounded-xl border border-slate-200 focus:border-accent outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Founder's Vision Statement</label>
+              <textarea name="founderStatement" value={formData.founderStatement} onChange={handleChange} rows={3} placeholder="Tell us about your mission..." className="w-full p-3 rounded-xl border border-slate-200 focus:border-accent outline-none" />
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {[
+              { id: 'incorporation_cert', label: 'Certificate of Incorporation', required: true },
+              { id: 'gst_cert', label: 'GST Certificate (Bonus +20)', required: false },
+              { id: 'business_pan', label: 'Business PAN (Bonus +20)', required: false },
+            ].map((d) => {
+              const result = ocrResults.find(r => r.type === d.id);
+              return (
+                <div key={d.id} className={`p-4 rounded-2xl border-2 transition-all ${docs[d.id as keyof typeof docs] ? 'border-green-100 bg-green-50/30' : 'border-slate-100 bg-white'}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-bold text-slate-700">{d.label} {d.required && <span className="text-red-500">*</span>}</span>
+                    {docs[d.id as keyof typeof docs] ? (
+                      <span className="flex items-center gap-1 text-xs font-bold text-green-600">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                        UPLOADED
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold text-slate-400">PENDING</span>
+                    )}
+                  </div>
+
+                  {!docs[d.id as keyof typeof docs] ? (
+                    <div className="relative h-20 border border-dashed border-slate-300 rounded-xl flex items-center justify-center hover:border-accent transition-colors">
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => handleDocUpload(d.id, reader.result as string);
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                      <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-white border border-green-200 flex items-center justify-center">
+                         <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" /></svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">OCR Extraction</p>
+                        <p className="text-xs font-mono text-slate-700 truncate">{result?.docNumber || 'Processing metadata...'}</p>
+                      </div>
+                      {result?.mismatch && (
+                        <div className="px-2 py-1 rounded bg-amber-100 text-[10px] font-bold text-amber-600 animate-pulse">
+                          FLAGGED
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <button disabled={loading} type="submit" className="w-full mt-6 py-4 kaame-gradient-alt text-white rounded-xl font-bold flex justify-center items-center gap-2 hover:shadow-xl transition-all shadow-xl shadow-slate-200">
+             {loading ? <span className="animate-pulse">Analyzing Documents...</span> : "Finalize Verification"}
+             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
           </button>
         </form>
       )}

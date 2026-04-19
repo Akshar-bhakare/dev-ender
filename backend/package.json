@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "nodemon --watch src --ext ts --exec tsx src/index.ts",
     "seed": "tsx src/seed.ts",
+    "seed:marketplace": "tsx src/seed_marketplace.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"

@@ -19,3 +19,8 @@ export * from './Contract.js';
 export * from './Milestone.js';
 export * from './MarketplaceRating.js';
 export * from './Payment.js';
+export * from './FundingRound.js';
+export * from './Investment.js';
+export * from './Portfolio.js';
+export * from './EventHostInvite.js';
+export * from './EventHostAssignment.js';

@@ -11,6 +11,26 @@ export const requireAuth = async (request: FastifyRequest, reply: FastifyReply) 
     }
 
     const token = authHeader.split(' ')[1];
+
+    // Developer Bypass for Hackathon Testing
+    if (token === 'mock-verified-token') {
+        const user = await User.findOne({ role: 'professional' });
+        if (user) {
+            (request as any).user = user;
+            (request as any).accountType = 'user';
+            return; // Authorized
+        }
+    }
+
+    if (token === 'mock-company-token') {
+        const company = await Company.findOne({ verificationStatus: 'verified' });
+        if (company) {
+            (request as any).company = company;
+            (request as any).accountType = 'company';
+            return; // Authorized
+        }
+    }
+
     const decoded: any = verifyToken(token);
 
     if (!decoded) {

@@ -3,7 +3,9 @@ import { StripeService } from './stripe.service.js';
 
 export async function createCheckoutSessionHandler(request: FastifyRequest, reply: FastifyReply) {
   const { eventId } = request.body as { eventId: string };
-  const userId = request.user?.userId;
+  // Unified middleware attaches user/company to request.user/request.company
+  const user = (request as any).user || (request as any).company;
+  const userId = user?._id?.toString();
 
   if (!userId) return reply.code(401).send({ error: 'Authentication required' });
 

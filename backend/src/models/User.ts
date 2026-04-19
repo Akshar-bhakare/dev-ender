@@ -3,7 +3,7 @@ import * as uuid from 'uuid';
 
 export type TrustLevel = 'low' | 'medium' | 'high' | 'premium';
 export type PermissionTier = 1 | 2 | 3 | 4;
-export type UserRole = 'professional' | 'company_owner' | 'admin';
+export type UserRole = 'professional' | 'company_owner' | 'company_admin' | 'company_event_host' | 'admin';
 export type UserStatus = 'onboarding' | 'active' | 'suspended' | 'deleted';
 export type DocumentType = 'aadhaar' | 'passport' | 'driving_license' | 'national_id' | 'emirates_id' | 'other';
 export type DocVerificationStatus = 'not_uploaded' | 'pending' | 'verified' | 'rejected';
@@ -99,9 +99,16 @@ const UserSchema = new Schema<IUser>(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     passwordHash: { type: String, required: true, select: false },
     phone: { type: String, sparse: true },
+    country: { type: String }, // For Onfido compliance
     role: { type: String, enum: ['professional', 'company_owner', 'admin'], default: 'professional' },
     status: { type: String, enum: ['onboarding', 'active', 'suspended', 'deleted'], default: 'onboarding' },
     signupStep: { type: Number, default: 1 },
+
+    // verification Provider
+    verificationProvider: { type: String, enum: ['manual_ocr', 'onfido'], default: 'manual_ocr' },
+    onfidoApplicantId: { type: String },
+    onfidoCheckId: { type: String },
+    onfidoSdkToken: { type: String },
 
     // Verification flags
     emailVerified: { type: Boolean, default: false },
@@ -177,6 +184,7 @@ const UserSchema = new Schema<IUser>(
 );
 
 UserSchema.index({ phone: 1 }, { sparse: true });
+UserSchema.index({ detectedDocNumber: 1 }, { sparse: true });
 UserSchema.index({ trustScore: -1 });
 UserSchema.index({ flagForManualReview: 1 });
 

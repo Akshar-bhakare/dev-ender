@@ -23,8 +23,12 @@ export default async function authRoutes(fastify: FastifyInstance) {
   // Company Signup Flow
   fastify.post('/auth/company/step1', AuthController.companyStep1);
   fastify.post('/auth/company/step2/verify-otp', { preHandler: [requireAuth] }, AuthController.companyStep2VerifyOtp);
-  fastify.post('/auth/company/step3/basic-info', { preHandler: [requireAuth] }, AuthController.companyStep3BasicInfo);
-  fastify.post('/auth/company/step4/detailed-info', { preHandler: [requireAuth] }, AuthController.companyStep4DetailedInfo);
+  fastify.post('/auth/company/step3/details', { preHandler: [requireAuth] }, AuthController.companyStep3BasicInfo);
+  fastify.post('/auth/company/step4/industry', { preHandler: [requireAuth] }, AuthController.companyStep4DetailedInfo);
+  fastify.post('/auth/company/step5/identity', { preHandler: [requireAuth] }, AuthController.companyStep5Identity);
   fastify.post('/auth/company/step5/documents', { preHandler: [requireAuth] }, AuthController.companyStep5Documents);
   fastify.post('/auth/company/step6/ownership', { preHandler: [requireAuth] }, AuthController.companyStep6Ownership);
+
+  // External Webhooks
+  fastify.post('/auth/onfido/webhook', AuthController.onfidoWebhook);
 }

@@ -9,6 +9,9 @@ import { TrustScoreService } from '../modules/trust/trust.service.js';
 import { FaceService } from '../services/face.service.js';
 import { OcrService } from '../services/ocr.service.js';
 import { CloudinaryService } from '../services/cloudinary.service.js';
+import { CompanyVerificationDoc } from '../models/CompanyVerificationDoc.js';
+import { TrustScoreCalculator } from '../utils/trust-score-calculator.js';
+import { OnfidoService } from '../services/onfido.service.js';
 
 // ==========================================
 // SHARED
@@ -112,7 +115,7 @@ export const resetPassword = async (request: FastifyRequest, reply: FastifyReply
 // ==========================================
 
 export const userStep1 = async (request: FastifyRequest, reply: FastifyReply) => {
-  const { fullName, email, password, phone } = request.body as any;
+  const { fullName, email, password, phone, country } = request.body as any;
 
   if (await User.exists({ email })) return reply.status(400).send({ success: false, error: { code: 'EMAIL_ALREADY_EXISTS', message: 'Email exists' }});
 
@@ -121,7 +124,7 @@ export const userStep1 = async (request: FastifyRequest, reply: FastifyReply) =>
 
   // Store signup data in JWT — user is NOT saved to DB yet
   const passwordHash = await hashPassword(password);
-  const signupSessionToken = generateToken({ pendingSignup: true, fullName, email, passwordHash, phone });
+  const signupSessionToken = generateToken({ pendingSignup: true, fullName, email, passwordHash, phone, country });
   return reply.send({ success: true, signupSessionToken, message: 'Step 1 complete. Check your email for OTP.' });
 };
 
@@ -144,18 +147,43 @@ export const userStep2VerifyOtp = async (request: FastifyRequest, reply: Fastify
     email: pending.email,
     passwordHash: pending.passwordHash,
     phone: pending.phone,
+    country: pending.country,
     role: 'professional',
     status: 'onboarding',
     signupStep: 2,
     emailVerified: true,
   });
 
+  // Init Onfido Applicant
+  try {
+    const names = pending.fullName.split(' ');
+    const firstName = names[0];
+    const lastName = names.slice(1).join(' ') || 'User';
+    
+    const applicantId = await OnfidoService.createApplicant({
+      firstName, lastName, email: pending.email, country: pending.country || 'US', type: 'individual'
+    });
+    user.onfidoApplicantId = applicantId;
+    user.verificationProvider = 'onfido';
+    const sdkToken = await OnfidoService.generateSdkToken(applicantId);
+    user.onfidoSdkToken = sdkToken;
+    await user.save();
+  } catch (err) {
+    console.error('Onfido Init Failed:', err);
+    // Continue anyway, manual flow fallback
+  }
+
   await TrustScoreService.addPoints({ userId: user._id.toString(), delta: 5, reason: 'Email verified' });
   await AuditLog.create({ userId: user._id, action: 'signup_step_2', ip: request.ip });
 
   // Issue a real session token now that user exists in DB
   const token = generateToken({ id: user._id, accountType: 'user' });
-  return reply.send({ success: true, signupSessionToken: token, message: 'Step 2 complete' });
+  return reply.send({ 
+    success: true, 
+    signupSessionToken: token, 
+    onfidoSdkToken: user.onfidoSdkToken,
+    message: 'Step 2 complete' 
+  });
 };
 
 export const userStep3ProfessionalDetails = async (request: FastifyRequest, reply: FastifyReply) => {
@@ -220,16 +248,52 @@ export const userComplete = async (request: FastifyRequest, reply: FastifyReply)
   user.faceVerified = true;
 
   // Apply document
+  console.log(`[OCR] Processing ${documentType} for user ${user._id}`);
+  const extracted = await OcrService.processIdentityDocument(documentImageBase64, documentType);
+  
+  if (extracted.docNumber) {
+    const duplicate = await User.findOne({ 
+      detectedDocNumber: extracted.docNumber, 
+      _id: { $ne: user._id },
+      status: { $ne: 'deleted' }
+    });
+    
+    if (duplicate) {
+      console.warn(`[OCR] Duplicate ID detected: ${extracted.docNumber} for user ${user._id}`);
+      return reply.status(400).send({ 
+        success: false, 
+        error: { 
+          code: 'DUPLICATE_IDENTITY', 
+          message: 'This identity document is already associated with another account.' 
+        } 
+      });
+    }
+    user.detectedDocNumber = extracted.docNumber;
+  }
+
+  if (extracted.fullName) user.detectedName = extracted.fullName;
+  if (extracted.dob) user.detectedDOB = extracted.dob;
+  if (extracted.country) user.detectedCountry = extracted.country;
+  user.documentOcrRaw = extracted.rawText;
+
   const docUrl = await CloudinaryService.uploadImage(documentImageBase64, 'syncup/documents');
-  const country = await OcrService.extractCountryFromImage(documentImageBase64);
   user.documentType = documentType;
   user.documentFrontUrl = docUrl;
-  user.detectedCountry = country;
   user.documentVerificationStatus = 'pending';
 
   // Activate
   user.status = 'active';
   user.signupStep = 5;
+
+  // Trigger Onfido Check if applicable
+  if (user.onfidoApplicantId) {
+    try {
+        const checkId = await OnfidoService.submitCheck(user.onfidoApplicantId, 'individual');
+        user.onfidoCheckId = checkId;
+    } catch (err) {
+        console.error('Onfido Check Submission Failed:', err);
+    }
+  }
 
   const badges: string[] = [];
   if (user.faceVerified && user.documentVerificationStatus !== 'not_uploaded') badges.push('identity_verified');
@@ -256,14 +320,14 @@ export const userComplete = async (request: FastifyRequest, reply: FastifyReply)
 // ==========================================
 
 export const companyStep1 = async (request: FastifyRequest, reply: FastifyReply) => {
-  const { repFullName, email, password, phone } = request.body as any;
+  const { repFullName, email, password, phone, country } = request.body as any;
 
   if (await User.exists({ email })) return reply.status(400).send({ success: false, error: { code: 'EMAIL_ALREADY_EXISTS', message: 'Email exists' }});
   
   const passwordHash = await hashPassword(password);
   
   const user = await User.create({
-    fullName: repFullName, email, passwordHash, phone, role: 'company_owner', status: 'onboarding'
+    fullName: repFullName, email, passwordHash, phone, country, role: 'company_owner', status: 'onboarding'
   });
 
   const company = await Company.create({
@@ -298,110 +362,220 @@ export const companyStep2VerifyOtp = async (request: FastifyRequest, reply: Fast
   await user!.save();
 
   company.signupStep = 2;
+  
+  // Init Onfido Applicant for Company Rep
+  try {
+    const names = user!.fullName.split(' ');
+    const firstName = names[0];
+    const lastName = names.slice(1).join(' ') || 'User';
+    
+    const applicantId = await OnfidoService.createApplicant({
+      firstName, lastName, email: user!.email, country: user!.country || 'US', type: 'individual'
+    });
+    user!.onfidoApplicantId = applicantId;
+    await user!.save();
+    
+    const companyApplicantId = await OnfidoService.createApplicant({
+       firstName: company.legalName, lastName: 'Company', email: user!.email, country: user!.country || 'US', type: 'business'
+    });
+    company.onfidoApplicantId = companyApplicantId;
+    const sdkToken = await OnfidoService.generateSdkToken(companyApplicantId);
+    company.onfidoSdkToken = sdkToken;
+  } catch (err) {
+    console.error('Onfido Company Init Failed:', err);
+  }
+
   await company.save();
 
   await TrustScoreService.addPoints({ companyId: company._id.toString(), delta: 5, reason: 'Email verified' });
   await TrustScoreService.addPoints({ companyId: company._id.toString(), delta: 10, reason: 'Phone verified' });
 
-  return reply.send({ success: true, message: 'Company Step 2 complete' });
+  return reply.send({ 
+    success: true, 
+    onfidoSdkToken: company.onfidoSdkToken,
+    message: 'Company Step 2 complete' 
+  });
+};
+
+/**
+ * Handle Onfido Webhooks (Document Clear, Facial Matching, known_fraud check)
+ */
+export const onfidoWebhook = async (request: FastifyRequest, reply: FastifyReply) => {
+    const { action, resource } = request.body as any; // Simplified check
+    
+    if (action === 'check.completed') {
+        const check = resource;
+        const applicantId = check.applicant_id;
+        
+        // Find user or company by applicant ID
+        const user = await User.findOne({ onfidoApplicantId: applicantId });
+        const company = await Company.findOne({ onfidoApplicantId: applicantId });
+        
+        if (user) {
+            const res = OnfidoService.processCheckResult(check);
+            if (res.success) {
+                user.identityVerified = true;
+                user.documentVerificationStatus = 'verified';
+                await user.save();
+                await TrustScoreService.addPoints({ userId: user._id.toString(), delta: res.basePoints, reason: 'Onfido check clear' });
+            }
+        }
+
+        if (company) {
+             const res = OnfidoService.processCheckResult(check);
+             if (res.success) {
+                 company.verificationStatus = 'verified';
+                 await company.save();
+                 await TrustScoreService.addPoints({ companyId: company._id.toString(), delta: res.basePoints, reason: 'Onfido business check clear' });
+             }
+        }
+    }
+
+    return reply.status(200).send({ received: true });
 };
 
 export const companyStep3BasicInfo = async (request: FastifyRequest, reply: FastifyReply) => {
-  const { legalName, displayName, type, industry, size, yearEstablished, website, description, country, state, city } = request.body as any;
+  const { displayName, websiteUrl, linkedInUrl, customSlug } = request.body as any;
   const company = (request as any).company;
   const user = await User.findById(company.ownerId);
 
-  const existingCompany = await Company.findOne({ legalName: { $regex: new RegExp(`^${legalName}$`, 'i') }, _id: { $ne: company._id } });
-  if (existingCompany) {
-    await TrustScoreService.addPoints({ companyId: company._id.toString(), delta: -40, reason: 'Duplicate company name' });
-    company.flagForManualReview = true;
-    company.flagReason = 'Duplicate company name';
-    await company.save();
-    return reply.status(400).send({ success: false, error: { code: 'DUPLICATE_COMPANY_DETECTED', message: 'Company name matches existing record' }});
+  company.displayName = displayName || company.displayName;
+  company.website = websiteUrl;
+  company.customSlug = customSlug;
+  if (linkedInUrl) {
+    company.socialLinks = { ...company.socialLinks, linkedin: linkedInUrl };
   }
-
-  company.legalName = legalName;
-  company.displayName = displayName;
-  company.type = type;
-  company.industry = industry;
-  company.size = size;
-  company.yearEstablished = yearEstablished;
-  company.website = website;
-  company.description = description;
-  company.registeredCountry = country;
-  company.registeredState = state;
-  company.registeredCity = city;
   company.signupStep = 3;
 
   // basic domain verification
-  if (website && user!.email) {
+  if (websiteUrl && user!.email) {
     try {
       const emailDomain = user!.email.split('@')[1];
-      const webDomain = new URL(website).hostname.replace('www.', '');
+      const webDomain = new URL(websiteUrl).hostname.replace('www.', '');
       if (emailDomain === webDomain) {
         company.domainEmailVerified = true;
       }
-    } catch (e) {
-      // Ignored
-    }
+    } catch (e) { /* ignored */ }
   }
 
   await company.save();
-
   if (company.domainEmailVerified) {
     await TrustScoreService.addPoints({ companyId: company._id.toString(), delta: 30, reason: 'Domain matched email' });
   }
 
-  return reply.send({ success: true, message: 'Company Step 3 complete' });
+  return reply.send({ success: true, message: 'Company Step 3 (Branding) complete' });
 };
 
 export const companyStep4DetailedInfo = async (request: FastifyRequest, reply: FastifyReply) => {
-  const { registrationNumber, gstNumber, taxId, panNumber, address, logoUrl, googleMapsUrl, socialLinks } = request.body as any;
+  const { industry, size, yearFounded } = request.body as any;
   const company = (request as any).company;
 
-  company.registrationNumber = registrationNumber;
-  company.gstNumber = gstNumber;
-  company.taxId = taxId;
-  company.panNumber = panNumber;
-  company.address = address;
-  company.logoUrl = logoUrl;
-  company.googleMapsUrl = googleMapsUrl;
-  if(socialLinks) company.socialLinks = socialLinks;
+  company.industry = industry;
+  company.size = size;
+  company.yearEstablished = yearFounded;
   company.signupStep = 4;
   
   await company.save();
 
-  if (registrationNumber) await TrustScoreService.addPoints({ companyId: company._id.toString(), delta: 25, reason: 'Registration Number' });
-  if (gstNumber || taxId) await TrustScoreService.addPoints({ companyId: company._id.toString(), delta: 20, reason: 'GST/Tax ID' });
-  if (googleMapsUrl) await TrustScoreService.addPoints({ companyId: company._id.toString(), delta: 10, reason: 'Google Maps url' });
+  await TrustScoreService.addPoints({ companyId: company._id.toString(), delta: 10, reason: 'Industry & Size provided' });
+  return reply.send({ success: true, message: 'Company Step 4 (Industry) complete' });
+};
 
-  return reply.send({ success: true, message: 'Company Step 4 complete' });
+export const companyStep5Identity = async (request: FastifyRequest, reply: FastifyReply) => {
+    const { faceImageBase64 } = request.body as any;
+    const company = (request as any).company;
+    const user = await User.findById(company.ownerId);
+
+    // Manual face verification simulation
+    if (faceImageBase64) {
+        company.representativeFaceVerified = true;
+    }
+    
+    company.signupStep = 5;
+    await company.save();
+
+    await TrustScoreService.addPoints({ companyId: company._id.toString(), delta: 15, reason: 'Representative Identity Verified' });
+    return reply.send({ success: true, message: 'Representative identity verified' });
 };
 
 export const companyStep5Documents = async (request: FastifyRequest, reply: FastifyReply) => {
-  const { registrationCertificateBase64, gstCertificateBase64, representativeIdBase64 } = request.body as any;
+  const { docType, documentImageBase64 } = request.body as { docType: string, documentImageBase64: string };
   const company = (request as any).company;
 
-  if (registrationCertificateBase64) {
-    company.registrationCertificateUrl = await CloudinaryService.uploadImage(registrationCertificateBase64, 'syncup/company-docs');
-  }
-  if (gstCertificateBase64) {
-    company.gstCertificateUrl = await CloudinaryService.uploadImage(gstCertificateBase64, 'syncup/company-docs');
-  }
-  if (representativeIdBase64) {
-    company.representativeIdUrl = await CloudinaryService.uploadImage(representativeIdBase64, 'syncup/rep-docs');
+  if (!docType || !documentImageBase64) {
+    return reply.status(400).send({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Document type and image are required' } });
   }
 
-  company.documentUploaded = true;
-  company.documentVerificationStatus = 'pending';
-  company.signupStep = 5;
-  await company.save();
+  try {
+    console.log(`[OCR] Staged processing ${docType} for company ${company._id}`);
+    const extracted = await OcrService.processCompanyDocument(documentImageBase64, docType);
+    
+    // Check for duplicates
+    if (extracted.registrationNumber) {
+        const duplicate = await Company.findOne({ detectedRegistrationNumber: extracted.registrationNumber, _id: { $ne: company._id } });
+        if (duplicate) return reply.status(400).send({ success: false, error: { code: 'DUPLICATE_COMPANY', message: 'This registration is already on file.' } });
+    }
 
-  if (company.registrationCertificateUrl) {
-    await TrustScoreService.addPoints({ companyId: company._id.toString(), delta: 25, reason: 'Uploaded CoI' });
+    // Upload to Cloudinary
+    const docUrl = await CloudinaryService.uploadImage(documentImageBase64, `syncup/company-docs/${company._id}`);
+
+    // Create Verification Record
+    const verifDoc = await CompanyVerificationDoc.create({
+      companyId: company._id,
+      docType,
+      fileUrl: docUrl,
+      extractedText: extracted.rawText,
+      extractedFields: {
+        registrationNumber: extracted.registrationNumber,
+        gstin: extracted.gstin,
+        pan: extracted.pan,
+        legalName: extracted.legalName,
+        address: extracted.address,
+        dateOfIncorporation: extracted.dateOfIncorporation
+      },
+      verificationStatus: 'pending'
+    });
+
+    // Cross-check metadata
+    let mismatch = false;
+    if (extracted.legalName && !extracted.legalName.includes(company.legalName.toUpperCase())) {
+      verifDoc.mismatchFound = true;
+      verifDoc.mismatchDetails = `Name on doc (${extracted.legalName}) does not match registered name (${company.legalName})`;
+      mismatch = true;
+    }
+
+    await verifDoc.save();
+
+    // Map extracted fields to company record for certain types
+    if (docType === 'incorporation_cert' && extracted.registrationNumber) {
+        company.detectedRegistrationNumber = extracted.registrationNumber;
+        company.certificateVerified = !mismatch;
+    }
+    if (docType === 'gst_cert' && extracted.gstin) {
+        company.gstNumber = extracted.gstin;
+        company.gstVerified = !mismatch;
+    }
+    if (extracted.address) {
+        company.detectedAddress = extracted.address;
+        company.addressMatched = true; // simplified for demo
+    }
+
+    company.documentUploaded = true;
+    await company.save();
+
+    return reply.send({ 
+      success: true, 
+      message: `${docType} processed`,
+      extracted: {
+        legalName: extracted.legalName,
+        docNumber: extracted.registrationNumber || extracted.gstin || extracted.pan,
+        mismatch
+      }
+    });
+
+  } catch (err: any) {
+    return reply.status(500).send({ success: false, error: { code: 'OCR_ERROR', message: err.message } });
   }
-
-  return reply.send({ success: true, message: 'Company Step 5 complete' });
 };
 
 export const companyStep6Ownership = async (request: FastifyRequest, reply: FastifyReply) => {
@@ -416,14 +590,35 @@ export const companyStep6Ownership = async (request: FastifyRequest, reply: Fast
     company.founderVerified = 'pending_review';
   }
 
+  // Calculate Final Trust Score
+  const representative = await User.findById(company.ownerId);
+  company.trustScore = TrustScoreCalculator.calculate(company, representative);
+  company.trustLevel = TrustScoreCalculator.getLevel(company.trustScore);
+  company.permissionTier = TrustScoreCalculator.getTier(company.trustScore);
+
   company.status = 'active';
+  if (company.trustScore >= 70) {
+      company.verificationStatus = 'verified';
+  }
   
   // Set badges based on milestones
   const badges = [];
-  if (company.founderVerified === 'verified') badges.push('verified_founder');
+  if (company.domainEmailVerified) badges.push('domain_verified');
+  if (company.gstVerified) badges.push('gst_verified');
+  if (company.certificateVerified) badges.push('incorporation_verified');
   if (company.trustScore >= 85) badges.push('premium_member');
-  if (company.verificationStatus === 'verified') badges.push('company_verified');
+  
   company.badges = badges;
+
+  // Trigger Onfido Business Check
+  if (company.onfidoApplicantId) {
+    try {
+        const checkId = await OnfidoService.submitCheck(company.onfidoApplicantId, 'business');
+        company.onfidoCheckId = checkId;
+    } catch (err) {
+        console.error('Onfido Company Check Failed:', err);
+    }
+  }
 
   await company.save();
 

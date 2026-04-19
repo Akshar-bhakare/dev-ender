@@ -1,11 +1,12 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { KaaMeNavbar } from "@/components/kaa-me/KaaMeNavbar";
 import { motion } from "framer-motion";
 import {
   ShieldCheck, MapPin, Link as LinkIcon, Calendar, Edit3, Save, Plus, X,
-  Briefcase, GraduationCap, Star, ExternalLink, Users, UserPlus, Check, ArrowLeft
+  Briefcase, GraduationCap, Star, ExternalLink, Users, UserPlus, Check, ArrowLeft, ImageOff
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { PostCard } from "@/components/kaa-me/PostCard";
@@ -23,7 +24,8 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSelf, setIsSelf] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [activeTab, setActiveTab] = useState<"posts" | "about">("posts");
+  const [activeTab, setActiveTab] = useState<"posts" | "about" | "hosted">("posts");
+  const [hostedEvents, setHostedEvents] = useState<any[]>([]);
 
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [draft, setDraft] = useState<any>({});
@@ -37,6 +39,11 @@ export default function ProfilePage() {
         setPosts(data.posts || []);
         setIsFollowing(data.user.isFollowing || false);
         setIsSelf(me?._id?.toString() === userId || me?._id?.toString() === data.user._id?.toString());
+        
+        // Load events for this host (demo logic using imported mock data)
+        const eventsData = (await import("@/mock-data/events.json")).default;
+        const myEvents = eventsData.filter((e: any) => e.hostId === userId);
+        setHostedEvents(myEvents);
       } catch {
         setProfile(null);
       } finally {
@@ -154,12 +161,24 @@ export default function ProfilePage() {
 
               <div className="flex gap-2 pb-1">
                 {isSelf ? (
-                  <button
-                    onClick={() => editingSection === "hero" ? saveEdit() : startEdit("hero")}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-primary transition-all shadow-sm"
-                  >
-                    {editingSection === "hero" ? <><Save className="w-4 h-4" /> Save</> : <><Edit3 className="w-4 h-4" /> Edit Profile</>}
-                  </button>
+                  <div className="flex items-center gap-3">
+                    {['company_admin', 'company_event_host', 'company_owner'].includes(profile.role) && (
+                        <div className="hidden md:flex flex-col items-end mr-4">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Host Performance</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm font-bold text-emerald-600">98% Satisfied</span>
+                                <div className="w-1 h-1 bg-slate-300 rounded-full" />
+                                <span className="text-sm font-bold text-slate-900">4.9/5</span>
+                            </div>
+                        </div>
+                    )}
+                    <button
+                      onClick={() => editingSection === "hero" ? saveEdit() : startEdit("hero")}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-primary transition-all shadow-sm"
+                    >
+                      {editingSection === "hero" ? <><Save className="w-4 h-4" /> Save</> : <><Edit3 className="w-4 h-4" /> Edit Profile</>}
+                    </button>
+                  </div>
                 ) : (
                   <>
                     <button onClick={handleFollow} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm ${isFollowing ? 'bg-slate-100 text-slate-700 hover:bg-red-50 hover:text-red-500' : 'bg-slate-900 text-white hover:bg-primary'}`}>
@@ -193,6 +212,11 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-2 flex-wrap mb-1">
                   <h1 className="text-2xl font-display font-bold text-slate-900">{profile.fullName || profile.name}</h1>
                   {isVerified && <span className="text-[10px] font-bold bg-accent/10 text-accent px-2 py-0.5 rounded-full border border-accent/20">✔ Verified Human</span>}
+                  {['company_admin', 'company_event_host', 'company_owner'].includes(profile.role) && (
+                    <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-primary/20 flex items-center gap-1">
+                      <Star className="w-3 h-3 fill-primary" /> Verified Host
+                    </span>
+                  )}
                 </div>
                 <p className="text-base text-slate-600 font-medium mt-0.5">
                   {profile.jobTitle}{profile.currentCompany ? <span className="text-slate-400"> @ {profile.currentCompany}</span> : ""}
@@ -225,11 +249,14 @@ export default function ProfilePage() {
 
         {/* Tabs */}
         <div className="flex gap-1 bg-white border border-slate-100 rounded-2xl p-1.5 shadow-sm w-fit">
-          {(["posts", "about"] as const).map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)} className={`px-6 py-2.5 rounded-xl text-sm font-bold capitalize transition-all ${activeTab === tab ? 'bg-primary text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}>
-              {tab === "posts" ? `Posts (${posts.length})` : "About"}
-            </button>
-          ))}
+          {(["posts", "about", "hosted"] as const).map(tab => {
+            if (tab === 'hosted' && !['company_admin', 'company_event_host', 'company_owner'].includes(profile.role)) return null;
+            return (
+              <button key={tab} onClick={() => setActiveTab(tab)} className={`px-6 py-2.5 rounded-xl text-sm font-bold capitalize transition-all ${activeTab === tab ? 'bg-primary text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}>
+                {tab === "posts" ? `Posts (${posts.length})` : tab === "hosted" ? `Events Hosted (${hostedEvents.length})` : "About"}
+              </button>
+            );
+          })}
         </div>
 
         {/* Posts Tab */}
@@ -246,7 +273,34 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* About Tab */}
+        {/* Hosted Tab */}
+        {activeTab === "hosted" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {hostedEvents.length === 0 ? (
+              <div className="col-span-full bg-white border border-slate-100 rounded-[2rem] p-16 text-center shadow-sm">
+                <p className="text-slate-500 font-semibold text-base">No hosted events yet.</p>
+              </div>
+            ) : hostedEvents.map((event: any) => (
+              <Link key={event.id} href={`/events/${event.id}`}>
+                <div className="bg-white border border-slate-100 rounded-[2rem] overflow-hidden group shadow-sm hover:shadow-md transition-all cursor-pointer">
+                   <div className="h-32 overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                      {event.image ? (
+                        <img src={event.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                      ) : (
+                        <div className="opacity-10">
+                           <ImageOff className="w-6 h-6" />
+                        </div>
+                      )}
+                   </div>
+                   <div className="p-6">
+                      <h4 className="font-bold text-slate-900 group-hover:text-primary transition-colors line-clamp-1">{event.title}</h4>
+                      <p className="text-xs text-slate-400 mt-1 font-medium">{event.date}</p>
+                   </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
         {activeTab === "about" && (
           <div className="space-y-4">
 

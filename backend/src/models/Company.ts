@@ -128,12 +128,28 @@ const CompanySchema = new Schema<ICompany>(
     founderVerified: { type: String, enum: ['not_claimed', 'pending_review', 'verified', 'rejected'], default: 'not_claimed' },
 
     domainEmailVerified: { type: Boolean, default: false },
+    domainVerifiedAt: { type: Date },
+    gstVerified: { type: Boolean, default: false },
+    certificateVerified: { type: Boolean, default: false },
+    addressMatched: { type: Boolean, default: false },
+    representativeLinked: { type: Boolean, default: false },
+    
     documentUploaded: { type: Boolean, default: false },
-    documentVerificationStatus: { type: String, enum: ['not_uploaded', 'pending', 'verified', 'rejected'], default: 'not_uploaded' },
+    documentOcrRaw: { type: String, select: false },
+    detectedRegistrationNumber: { type: String, select: false },
+    detectedGSTIN: { type: String, select: false },
+    detectedPAN: { type: String, select: false },
+    detectedAddress: { type: String, select: false },
+    
     verificationStatus: { type: String, enum: ['unverified', 'pending', 'verified', 'rejected'], default: 'unverified' },
+    verificationFlags: [{ type: String }], // e.g. 'NAME_MISMATCH', 'DOMAIN_MISMATCH'
 
     status: { type: String, enum: ['onboarding', 'active', 'suspended'], default: 'onboarding' },
     signupStep: { type: Number, default: 1 },
+
+    onfidoApplicantId: { type: String },
+    onfidoCheckId: { type: String },
+    onfidoSdkToken: { type: String },
 
     trustScore: { type: Number, default: 0, min: 0, max: 100 },
     trustLevel: { type: String, enum: ['low', 'medium', 'high', 'premium'], default: 'low' },
@@ -159,16 +175,16 @@ const CompanySchema = new Schema<ICompany>(
   { timestamps: true }
 );
 
-CompanySchema.pre('save', function (next) {
+CompanySchema.pre('save', function () {
   if (this.isNew || this.isModified('legalName')) {
     const slug = (slugifyLib as any).default || slugifyLib;
     // @ts-ignore
     this.slug = slug(this.legalName, { lower: true, strict: true }) + '-' + Math.random().toString(36).slice(2, 7);
   }
-  next();
 });
 
 CompanySchema.index({ legalName: 'text', industry: 'text' });
+CompanySchema.index({ detectedRegistrationNumber: 1 }, { sparse: true });
 CompanySchema.index({ trustScore: -1 });
 
 export const Company = mongoose.models.Company || mongoose.model<ICompany>('Company', CompanySchema);

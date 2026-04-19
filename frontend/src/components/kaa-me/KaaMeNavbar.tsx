@@ -2,10 +2,17 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 
 export const KaaMeNavbar = () => {
   const { isAuthenticated, logout, isLoading } = useAuth();
+  const pathname = usePathname();
+
+  // Hide navbar on auth pages
+  if (pathname === "/login" || pathname === "/register") {
+    return null;
+  }
 
   return (
     <nav className="sticky top-0 z-50 w-full bg-[var(--glass-bg)] backdrop-blur-xl border-b border-[var(--glass-border)] px-6 py-4 flex items-center justify-between overflow-hidden">
