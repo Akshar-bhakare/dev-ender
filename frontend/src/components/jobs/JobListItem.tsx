@@ -11,6 +11,15 @@ interface JobListItemProps {
 }
 
 export function JobListItem({ job, isSelected, onClick }: JobListItemProps) {
+  // Handle both mock and real API data mapping
+  const companyName = job.company || job.companyId?.displayName || "Unknown Company";
+  const companyLogo = job.logo || job.companyId?.logoUrl || "https://avatar.vercel.sh/company";
+  const jobType = job.type || job.jobType?.replace('_', ' ') || "Full Time";
+  const salaryRange = job.salary || (job.minSalary ? `₹${(job.minSalary/100000).toFixed(1)}L - ₹${(job.maxSalary/100000).toFixed(1)}L` : "Competitive");
+  const applicants = job.applicants || job.applicationCount || 0;
+  const isVerified = job.verified || job.companyId?.verificationStatus === 'verified';
+  const postedDate = job.postedAt || (job.createdAt ? new Date(job.createdAt).toLocaleDateString() : "Recent");
+
   return (
     <motion.div
       onClick={onClick}
@@ -22,7 +31,7 @@ export function JobListItem({ job, isSelected, onClick }: JobListItemProps) {
     >
       <div className="flex gap-4">
         <div className="w-14 h-14 rounded-xl overflow-hidden border border-slate-100 flex-shrink-0 bg-white">
-          <img src={job.logo} alt={job.company} className="w-full h-full object-cover" />
+          <img src={companyLogo} alt={companyName} className="w-full h-full object-cover" />
         </div>
         
         <div className="flex-1 min-w-0">
@@ -36,29 +45,29 @@ export function JobListItem({ job, isSelected, onClick }: JobListItemProps) {
           </div>
           
           <div className="text-sm font-medium text-slate-600 mb-2">
-            {job.company}
+            {companyName}
           </div>
           
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] font-bold text-slate-400">
             <div className="flex items-center gap-1">
               <MapPin className="w-3 h-3" />
-              {job.type}
+              {jobType}
             </div>
             <div className="flex items-center gap-1 text-primary">
               <DollarSign className="w-3 h-3" />
-              {job.salary}
+              {salaryRange}
             </div>
             <div className="flex items-center gap-1">
               <Users className="w-3 h-3" />
-              {job.applicants} applicants
+              {applicants} applicants
             </div>
           </div>
           
           <div className="mt-3 flex items-center gap-2">
             <span className="text-[10px] font-black text-slate-300 uppercase tracking-wider">
-              {job.postedAt}
+              {postedDate}
             </span>
-            {job.verified && (
+            {isVerified && (
               <div className="flex items-center gap-1 px-2 py-0.5 bg-accent/10 border border-accent/20 rounded-full">
                 <ShieldCheck className="w-2.5 h-2.5 text-accent" />
                 <span className="text-[10px] font-black text-accent uppercase tracking-tighter">Verified</span>
@@ -78,3 +87,4 @@ export function JobListItem({ job, isSelected, onClick }: JobListItemProps) {
     </motion.div>
   );
 }
+

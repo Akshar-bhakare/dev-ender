@@ -375,21 +375,30 @@ export const companyStep1 = async (request: FastifyRequest, reply: FastifyReply)
   try {
     const { repFullName, legalName, email, password, phone, country } = request.body as any;
 
+    console.log('[Signup] Company Step 1 Request:', { repFullName, legalName, email, phone, country });
+
+    if (!repFullName || !email || !password || !legalName) {
+      return reply.status(400).send({ 
+        success: false, 
+        error: { code: 'VALIDATION_ERROR', message: 'Full Name, Email, Password, and Legal Name are required' } 
+      });
+    }
+
     // 1. Check if user already exists
     if (await User.exists({ email })) {
-      return reply.status(400).send({ success: false, error: { code: 'EMAIL_ALREADY_EXISTS', message: 'User with this email already exists' }});
+      return reply.status(400).send({ success: false, error: { code: 'EMAIL_ALREADY_EXISTS', message: 'An account with this email already exists' }});
     }
 
     // 2. Check if company already exists
     if (await Company.exists({ legalName })) {
-      return reply.status(400).send({ success: false, error: { code: 'COMPANY_ALREADY_EXISTS', message: 'Company with this legal name is already registered' }});
+      return reply.status(400).send({ success: false, error: { code: 'COMPANY_ALREADY_EXISTS', message: 'A company with this legal name already exists' }});
     }
     
     const passwordHash = await hashPassword(password);
     
     // 3. Create User
     const user = await User.create({
-      fullName: repFullName || legalName, 
+      fullName: repFullName, 
       email, 
       passwordHash, 
       phone, 
@@ -401,8 +410,9 @@ export const companyStep1 = async (request: FastifyRequest, reply: FastifyReply)
     // 4. Create Company
     const company = await Company.create({
       ownerId: user._id,
-      legalName: legalName || `Company_${user._id}`,
-      displayName: legalName || repFullName,
+      legalName: legalName,
+      displayName: repFullName,
+      name: legalName, // Legacy support field
       status: 'onboarding',
       signupStep: 1
     });
@@ -422,12 +432,19 @@ export const companyStep1 = async (request: FastifyRequest, reply: FastifyReply)
         } 
       });
     }
-    throw error; // Let global error handler take it
+    console.error('Company Step 1 Error:', error);
+    return reply.status(500).send({ 
+      success: false, 
+      error: { 
+        code: 'INTERNAL_ERROR', 
+        message: error.message || 'An unexpected error occurred during registration' 
+      } 
+    });
   }
 };
 
 export const companyStep2VerifyOtp = async (request: FastifyRequest, reply: FastifyReply) => {
-  const { emailOtp, phoneOtp } = request.body as any;
+  const { emailOtp } = request.body as any;
   const company = (request as any).company;
   const user = await User.findById(company.ownerId);
 

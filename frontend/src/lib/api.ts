@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:3001/api/v1';
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -27,7 +27,14 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response.data, // Automatically unwrap the Axios Response 'data' wrapper if desired, but we'll return response for now. Actually let's return response to standard axiog usages.
   (error) => {
-    console.error('API Error:', error.response?.data || error.message);
+    const errorContext = {
+      data: error.response?.data,
+      status: error.response?.status,
+      message: error.message,
+      url: error.config?.url,
+      method: error.config?.method
+    };
+    console.error('API Error details:', JSON.stringify(errorContext, null, 2));
     return Promise.reject(error);
   }
 );

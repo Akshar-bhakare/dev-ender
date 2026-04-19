@@ -63,7 +63,9 @@ export const CompanySteps = ({ onBack }: CompanyStepsProps) => {
       localStorage.setItem("signupSessionToken", res.signupSessionToken);
       setStep(2);
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || "Failed to start registration");
+      console.error("Registration Error:", err);
+      const errorMessage = err.response?.data?.error?.message || err.message || "Failed to start registration";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -74,8 +76,7 @@ export const CompanySteps = ({ onBack }: CompanyStepsProps) => {
     setLoading(true); setError(null);
     try {
       const res: any = await api.post("/auth/company/step2/verify-otp", {
-        emailOtp: formData.emailOtp,
-        phoneOtp: formData.phoneOtp
+        emailOtp: formData.emailOtp
       });
       if (res.onfidoSdkToken) setOnfidoToken(res.onfidoSdkToken);
       setStep(3);
@@ -224,21 +225,21 @@ export const CompanySteps = ({ onBack }: CompanyStepsProps) => {
             <input required name="legalName" value={formData.legalName} onChange={handleChange} className="w-full p-3 rounded-xl border border-slate-200 focus:border-accent focus:ring-1 focus:ring-accent outline-none" placeholder="e.g. Acme Corporation Pvt Ltd" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Representative Full Name</label>
-            <input required name="repFullName" value={formData.repFullName} onChange={handleChange} className="w-full p-3 rounded-xl border border-slate-200 focus:border-accent focus:ring-1 focus:ring-accent outline-none" placeholder="Your name as per documents" />
+            <label className="block text-sm font-medium text-slate-700 mb-1">Your Full Name (Representative)</label>
+            <input required name="repFullName" value={formData.repFullName} onChange={handleChange} className="w-full p-3 rounded-xl border border-slate-200 focus:border-accent focus:ring-1 focus:ring-accent outline-none" placeholder="e.g. John Doe" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Admin Email</label>
-            <input required type="email" name="email" value={formData.email} onChange={handleChange} className="w-full p-3 rounded-xl border border-slate-200 focus:border-accent focus:ring-1 focus:ring-accent outline-none" />
+            <label className="block text-sm font-medium text-slate-700 mb-1">Work Email</label>
+            <input required type="email" name="email" value={formData.email} onChange={handleChange} className="w-full p-3 rounded-xl border border-slate-200 focus:border-accent focus:ring-1 focus:ring-accent outline-none" placeholder="ceo@company.com" />
           </div>
           <div className="grid grid-cols-2 gap-4">
              <div>
-               <label className="block text-sm font-medium text-slate-700 mb-1">Admin Password</label>
+               <label className="block text-sm font-medium text-slate-700 mb-1">Create Password</label>
                <input required type="password" name="password" minLength={8} value={formData.password} onChange={handleChange} className="w-full p-3 rounded-xl border border-slate-200 focus:border-accent focus:ring-1 focus:ring-accent outline-none" />
              </div>
              <div>
                <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number</label>
-               <input required type="tel" name="phone" value={formData.phone} onChange={handleChange} className="w-full p-3 rounded-xl border border-slate-200 focus:border-accent focus:ring-1 focus:ring-accent outline-none" />
+               <input required type="tel" name="phone" value={formData.phone} onChange={handleChange} className="w-full p-3 rounded-xl border border-slate-200 focus:border-accent focus:ring-1 focus:ring-accent outline-none" placeholder="+1234567890" />
              </div>
           </div>
           <div>
@@ -264,20 +265,16 @@ export const CompanySteps = ({ onBack }: CompanyStepsProps) => {
 
       {step === 2 && (
         <form onSubmit={handleStep2} className="space-y-6">
-          <h2 className="text-2xl font-display font-bold text-slate-900 mb-2">Verify Contact</h2>
-          <p className="text-slate-500 mb-6 font-medium text-sm">We've sent codes to {formData.email} and your phone.</p>
+          <h2 className="text-2xl font-display font-bold text-slate-900 mb-2">Verify Email</h2>
+          <p className="text-slate-500 mb-6 font-medium text-sm">We've sent a 6-digit verification code to <span className="text-slate-900 font-bold">{formData.email}</span>.</p>
           
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Email Verification Code</label>
             <input required name="emailOtp" value={formData.emailOtp} onChange={handleChange} className="w-full p-3 text-center tracking-widest text-lg font-mono rounded-xl border border-slate-200 focus:border-accent outline-none" placeholder="123456" maxLength={6} />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Phone Verification Code</label>
-            <input required name="phoneOtp" value={formData.phoneOtp} onChange={handleChange} className="w-full p-3 text-center tracking-widest text-lg font-mono rounded-xl border border-slate-200 focus:border-accent outline-none" placeholder="123456" maxLength={6} />
-          </div>
 
           <button disabled={loading} type="submit" className="w-full mt-6 py-4 kaame-gradient-alt text-white rounded-xl font-bold hover:shadow-lg transition-all">
-             Verify
+             Verify & Continue
           </button>
         </form>
       )}

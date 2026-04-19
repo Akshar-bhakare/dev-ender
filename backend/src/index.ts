@@ -60,7 +60,13 @@ fastify.register(multipart, {
 
 // Register CORS
 fastify.register(cors, {
-  origin: process.env.FRONTEND_URL || '*',
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:3000'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
 });
 
 // Health check
@@ -90,6 +96,23 @@ fastify.register(companyInviteRoutes, { prefix: '/api/v1/company' });
 // Protected test route
 fastify.get('/api/test', { preHandler: [requireAuth] }, async (request, reply) => {
   return { message: 'You are authenticated!', accountType: (request as any).accountType, user: (request as any).user || (request as any).company };
+});
+
+// Global error handler
+fastify.setErrorHandler((error, request, reply) => {
+  fastify.log.error(error);
+  
+  const statusCode = error.statusCode || 500;
+  const isValidationError = error.validation || error.name === 'ValidationError';
+  
+  reply.status(statusCode).send({
+    success: false,
+    error: {
+      code: isValidationError ? 'VALIDATION_ERROR' : (error.code || 'INTERNAL_ERROR'),
+      message: error.message || 'An unexpected error occurred',
+      details: error.validation
+    }
+  });
 });
 
 // Start the server
