@@ -43,7 +43,7 @@ export interface IUser extends Document {
   detectedDocNumber?: string;
 
   // Onfido
-  verificationProvider: 'manual_ocr' | 'onfido';
+  verificationProvider: 'manual_ocr' | 'onfido' | 'internal_ocr';
   onfidoApplicantId?: string;
   onfidoCheckId?: string;
   onfidoSdkToken?: string;
@@ -112,7 +112,7 @@ const UserSchema = new Schema<IUser>(
     signupStep: { type: Number, default: 1 },
 
     // verification Provider
-    verificationProvider: { type: String, enum: ['manual_ocr', 'onfido'], default: 'manual_ocr' },
+    verificationProvider: { type: String, enum: ['manual_ocr', 'onfido', 'internal_ocr'], default: 'manual_ocr' },
     onfidoApplicantId: { type: String },
     onfidoCheckId: { type: String },
     onfidoSdkToken: { type: String },

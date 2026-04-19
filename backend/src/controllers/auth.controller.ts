@@ -216,11 +216,70 @@ export const userStep4FaceVerify = async (request: FastifyRequest, reply: Fastif
 };
 
 export const userStep5DocumentVerify = async (request: FastifyRequest, reply: FastifyReply) => {
+  const user = (request as any).user as IUser;
   const { documentType, documentImageBase64 } = request.body as any;
+
   if (!documentType || !documentImageBase64) {
-    return reply.status(400).send({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Document required' } });
+    return reply.status(400).send({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Document type and image are required' } });
   }
-  return reply.send({ success: true, message: 'Step 5 validated' });
+
+  try {
+    console.log(`[OCR Verification] Processing ${documentType} for user ${user._id}`);
+    
+    // Perform OCR extraction
+    const extracted = await OcrService.processIdentityDocument(documentImageBase64, documentType);
+
+    if (!extracted.docNumber && !extracted.fullName) {
+      return reply.status(400).send({ 
+        success: false, 
+        error: { 
+          code: 'OCR_FAILED', 
+          message: 'Could not detect document info. Please ensure the image is clear and try again.' 
+        } 
+      });
+    }
+
+    // Basic heuristic validation: check if the extracted country matches the user's country
+    if (extracted.country && extracted.country !== 'unknown' && user.country) {
+       // Optional: Log mismatch but don't block for now to keep it "easy"
+       console.log(`[OCR] Country detected: ${extracted.country}, User country: ${user.country}`);
+    }
+
+    // Save extracted info
+    user.documentType = documentType;
+    user.documentNumber = extracted.docNumber || 'NOT_FOUND';
+    user.verificationStatus = 'verified'; // Mark as verified since OCR succeeded
+    user.verificationProvider = 'internal_ocr';
+    
+    // Upload image to Cloudinary for record keeping
+    const docUrl = await CloudinaryService.uploadImage(documentImageBase64, 'syncup/identity-docs');
+    user.documentFrontUrl = docUrl;
+
+    await user.save();
+
+    await TrustScoreService.addPoints({ 
+      userId: user._id.toString(), 
+      delta: 20, 
+      reason: 'Identity document verified via OCR' 
+    });
+
+    return reply.send({ 
+      success: true, 
+      message: 'Document verified successfully via OCR.',
+      extracted: {
+        docNumber: extracted.docNumber,
+        fullName: extracted.fullName,
+        country: extracted.country
+      }
+    });
+
+  } catch (err: any) {
+    console.error('[OCR] Verification Error:', err.message);
+    return reply.status(500).send({ 
+      success: false, 
+      error: { code: 'OCR_VERIFICATION_FAILED', message: 'Internal verification failed' } 
+    });
+  }
 };
 
 export const userComplete = async (request: FastifyRequest, reply: FastifyReply) => {
@@ -313,28 +372,58 @@ export const userComplete = async (request: FastifyRequest, reply: FastifyReply)
 // ==========================================
 
 export const companyStep1 = async (request: FastifyRequest, reply: FastifyReply) => {
-  const { repFullName, email, password, phone, country } = request.body as any;
+  try {
+    const { repFullName, legalName, email, password, phone, country } = request.body as any;
 
-  if (await User.exists({ email })) return reply.status(400).send({ success: false, error: { code: 'EMAIL_ALREADY_EXISTS', message: 'Email exists' }});
-  
-  const passwordHash = await hashPassword(password);
-  
-  const user = await User.create({
-    fullName: repFullName, email, passwordHash, phone, country, role: 'company_owner', status: 'onboarding'
-  });
+    // 1. Check if user already exists
+    if (await User.exists({ email })) {
+      return reply.status(400).send({ success: false, error: { code: 'EMAIL_ALREADY_EXISTS', message: 'User with this email already exists' }});
+    }
 
-  const company = await Company.create({
-    ownerId: user._id,
-    legalName: `Draft_Company_${user._id}`,
-    displayName: repFullName,
-    status: 'onboarding',
-    signupStep: 1
-  });
+    // 2. Check if company already exists
+    if (await Company.exists({ legalName })) {
+      return reply.status(400).send({ success: false, error: { code: 'COMPANY_ALREADY_EXISTS', message: 'Company with this legal name is already registered' }});
+    }
+    
+    const passwordHash = await hashPassword(password);
+    
+    // 3. Create User
+    const user = await User.create({
+      fullName: repFullName || legalName, 
+      email, 
+      passwordHash, 
+      phone, 
+      country, 
+      role: 'company_owner', 
+      status: 'onboarding'
+    });
 
-  await OtpService.sendEmailOtp(email, 'email_verify');
+    // 4. Create Company
+    const company = await Company.create({
+      ownerId: user._id,
+      legalName: legalName || `Company_${user._id}`,
+      displayName: legalName || repFullName,
+      status: 'onboarding',
+      signupStep: 1
+    });
 
-  const signupSessionToken = generateToken({ id: company._id, accountType: 'company' });
-  return reply.send({ success: true, signupSessionToken, message: 'Company Step 1 complete' });
+    await OtpService.sendEmailOtp(email, 'email_verify');
+
+    const signupSessionToken = generateToken({ id: company._id, accountType: 'company' });
+    return reply.send({ success: true, signupSessionToken, message: 'Company Step 1 complete' });
+  } catch (error: any) {
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern || {})[0] || 'field';
+      return reply.status(400).send({ 
+        success: false, 
+        error: { 
+          code: 'DUPLICATE_ERROR', 
+          message: `This ${field} is already in use. Please use a different one.` 
+        } 
+      });
+    }
+    throw error; // Let global error handler take it
+  }
 };
 
 export const companyStep2VerifyOtp = async (request: FastifyRequest, reply: FastifyReply) => {
@@ -515,7 +604,7 @@ export const companyStep5Documents = async (request: FastifyRequest, reply: Fast
     });
 
     let mismatch = false;
-    if (extracted.legalName && !extracted.legalName.includes(company.legalName.toUpperCase())) {
+    if (extracted.legalName && !extracted.legalName.toUpperCase().includes(company.legalName.toUpperCase())) {
       verifDoc.mismatchFound = true;
       verifDoc.mismatchDetails = `Name on doc (${extracted.legalName}) does not match registered name (${company.legalName})`;
       mismatch = true;

@@ -21,6 +21,7 @@ export const CompanySteps = ({ onBack }: CompanyStepsProps) => {
 
   const [formData, setFormData] = useState({
     legalName: "",
+    repFullName: "",
     email: "",
     password: "",
     phone: "",
@@ -52,6 +53,7 @@ export const CompanySteps = ({ onBack }: CompanyStepsProps) => {
     try {
       const res: any = await api.post("/auth/company/step1", {
         legalName: formData.legalName,
+        repFullName: formData.repFullName,
         email: formData.email,
         password: formData.password,
         phone: formData.phone,
@@ -219,7 +221,11 @@ export const CompanySteps = ({ onBack }: CompanyStepsProps) => {
           
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Legal Entity Name</label>
-            <input required name="legalName" value={formData.legalName} onChange={handleChange} className="w-full p-3 rounded-xl border border-slate-200 focus:border-accent focus:ring-1 focus:ring-accent outline-none" />
+            <input required name="legalName" value={formData.legalName} onChange={handleChange} className="w-full p-3 rounded-xl border border-slate-200 focus:border-accent focus:ring-1 focus:ring-accent outline-none" placeholder="e.g. Acme Corporation Pvt Ltd" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Representative Full Name</label>
+            <input required name="repFullName" value={formData.repFullName} onChange={handleChange} className="w-full p-3 rounded-xl border border-slate-200 focus:border-accent focus:ring-1 focus:ring-accent outline-none" placeholder="Your name as per documents" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Admin Email</label>
