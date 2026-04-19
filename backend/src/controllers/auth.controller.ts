@@ -320,38 +320,75 @@ export const userComplete = async (request: FastifyRequest, reply: FastifyReply)
 // ==========================================
 
 export const companyStep1 = async (request: FastifyRequest, reply: FastifyReply) => {
-  const { repFullName, email, password, phone, country } = request.body as any;
+  try {
+    const { repFullName, legalName, email, password, phone, country } = request.body as any;
+    console.log('[Signup] Company Step 1 Request:', { repFullName, legalName, email, phone, country });
 
-  if (await User.exists({ email })) return reply.status(400).send({ success: false, error: { code: 'EMAIL_ALREADY_EXISTS', message: 'Email exists' }});
-  
-  const passwordHash = await hashPassword(password);
-  
-  const user = await User.create({
-    fullName: repFullName, email, passwordHash, phone, country, role: 'company_owner', status: 'onboarding'
-  });
+    if (!repFullName || !email || !password || !legalName) {
+      return reply.status(400).send({ 
+        success: false, 
+        error: { code: 'VALIDATION_ERROR', message: 'Full Name, Email, Password, and Legal Name are required' } 
+      });
+    }
 
-  const company = await Company.create({
-    ownerId: user._id,
-    legalName: `Draft_Company_${user._id}`, // temporary name until step 3
-    displayName: repFullName,
-    status: 'onboarding',
-    signupStep: 1
-  });
+    if (await User.exists({ email })) {
+      return reply.status(400).send({ 
+        success: false, 
+        error: { code: 'EMAIL_ALREADY_EXISTS', message: 'An account with this email already exists' } 
+      });
+    }
 
-  await OtpService.sendEmailOtp(email, 'email_verify');
-  // await OtpService.sendPhoneOtp(phone, 'phone_verify');
+    if (await Company.exists({ legalName })) {
+        return reply.status(400).send({ 
+          success: false, 
+          error: { code: 'COMPANY_ALREADY_EXISTS', message: 'A company with this legal name already exists' } 
+        });
+    }
+    
+    const passwordHash = await hashPassword(password);
+    
+    const user = await User.create({
+      fullName: repFullName, 
+      email, 
+      passwordHash, 
+      phone, 
+      country, 
+      role: 'company_owner', 
+      status: 'onboarding'
+    });
 
-  const signupSessionToken = generateToken({ id: company._id, accountType: 'company' });
-  return reply.send({ success: true, signupSessionToken, message: 'Company Step 1 complete' });
+    const company = await Company.create({
+      ownerId: user._id,
+      legalName: legalName,
+      displayName: repFullName,
+      name: legalName, // Legacy support field satisfying rogue unique index
+      status: 'onboarding',
+      signupStep: 1
+    });
+
+    await OtpService.sendEmailOtp(email, 'email_verify');
+
+    const signupSessionToken = generateToken({ id: company._id, accountType: 'company' });
+    return reply.send({ success: true, signupSessionToken, message: 'Company Step 1 complete' });
+
+  } catch (err: any) {
+    console.error('Company Step 1 Error:', err);
+    return reply.status(500).send({ 
+      success: false, 
+      error: { 
+        code: 'INTERNAL_ERROR', 
+        message: err.message || 'An unexpected error occurred during registration' 
+      } 
+    });
+  }
 };
 
 export const companyStep2VerifyOtp = async (request: FastifyRequest, reply: FastifyReply) => {
-  const { emailOtp, phoneOtp } = request.body as any;
+  const { emailOtp } = request.body as any;
   const company = (request as any).company;
   const user = await User.findById(company.ownerId);
 
   const emailOk = await OtpService.verifyOtp(user!.email, emailOtp, 'email_verify');
-  // const phoneOk = await OtpService.verifyOtp(user!.phone!, phoneOtp, 'phone_verify');
 
   if (!emailOk) {
     return reply.status(400).send({ success: false, error: { code: 'INVALID_OTP', message: 'Invalid or expired OTP' }});

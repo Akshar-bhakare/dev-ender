@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { calculateJobMatch } from "@/lib/gemini";
+import { ApplyModal } from "./ApplyModal";
 
 interface JobDetailsPaneProps {
   job: any;
@@ -22,6 +23,7 @@ interface JobDetailsPaneProps {
 export function JobDetailsPane({ job }: JobDetailsPaneProps) {
   const [matchData, setMatchData] = useState<any>(null);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
 
   useEffect(() => {
     if (job) {
@@ -54,19 +56,35 @@ export function JobDetailsPane({ job }: JobDetailsPaneProps) {
     );
   }
 
+  // Handle both mock and real API data mapping
+  const companyName = job.company || job.companyId?.displayName || "Unknown Company";
+  const companyLogo = job.logo || job.companyId?.logoUrl || "https://avatar.vercel.sh/company";
+  const salaryRange = job.salary || (job.minSalary ? `₹${(job.minSalary/100000).toFixed(1)}L - ₹${(job.maxSalary/100000).toFixed(1)}L` : "Competitive");
+  const jobType = job.type || job.jobType?.replace('_', ' ') || "Full Time";
+  const skills = job.skills || job.requiredSkills?.map((s: any) => s.skillId?.name) || [];
+
   return (
     <div className="h-full bg-white border border-slate-100 rounded-xl overflow-hidden flex flex-col shadow-2xl shadow-slate-200/50 sticky top-[144px]">
+      <ApplyModal 
+        job={job} 
+        isOpen={isApplyModalOpen} 
+        onClose={() => setIsApplyModalOpen(false)} 
+      />
+
       {/* Header */}
       <div className="p-8 border-b border-slate-50">
         <div className="flex items-start justify-between mb-6">
           <div className="w-20 h-20 rounded-2xl overflow-hidden border border-slate-100 shadow-sm">
-            <img src={job.logo} alt={job.company} className="w-full h-full object-cover" />
+            <img src={companyLogo} alt={companyName} className="w-full h-full object-cover" />
           </div>
           <div className="flex gap-3">
             <button className="px-6 py-2.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-colors">
               Save
             </button>
-            <button className="px-8 py-2.5 kaame-gradient text-white rounded-lg text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-transform flex items-center gap-2">
+            <button 
+              onClick={() => setIsApplyModalOpen(true)}
+              className="px-8 py-2.5 kaame-gradient text-white rounded-lg text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-transform flex items-center gap-2"
+            >
               Apply Now <ExternalLink className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -79,15 +97,15 @@ export function JobDetailsPane({ job }: JobDetailsPaneProps) {
         <div className="flex flex-wrap items-center gap-6 mb-8 text-sm font-bold text-slate-500">
           <div className="flex items-center gap-2">
             <Building2 className="w-4 h-4 text-primary" />
-            <span className="text-slate-900">{job.company}</span>
+            <span className="text-slate-900">{companyName}</span>
           </div>
           <div className="flex items-center gap-2">
             <MapPin className="w-4 h-4" />
-            {job.type}
+            {jobType}
           </div>
           <div className="flex items-center gap-2 text-primary">
             <DollarSign className="w-4 h-4" />
-            {job.salary}
+            {salaryRange}
           </div>
         </div>
 
@@ -169,54 +187,61 @@ export function JobDetailsPane({ job }: JobDetailsPaneProps) {
 
         <section className="mb-10">
           <h4 className="font-display font-bold text-xl text-slate-900 mb-4">About the role</h4>
-          <p className="text-slate-600 leading-relaxed font-medium">
+          <p className="text-slate-600 leading-relaxed font-medium whitespace-pre-wrap">
             {job.description}
           </p>
         </section>
 
-        <section className="mb-10">
-          <h4 className="font-display font-bold text-xl text-slate-900 mb-4">Core Skills Required</h4>
-          <div className="flex flex-wrap gap-2">
-            {job.skills?.map((skill: string) => (
-              <span key={skill} className="px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold text-slate-600 hover:border-primary/30 transition-colors">
-                {skill}
-              </span>
-            ))}
-          </div>
-        </section>
+        {skills.length > 0 && (
+          <section className="mb-10">
+            <h4 className="font-display font-bold text-xl text-slate-900 mb-4">Core Skills Required</h4>
+            <div className="flex flex-wrap gap-2">
+              {skills.map((skill: string) => (
+                <span key={skill} className="px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold text-slate-600 hover:border-primary/30 transition-colors">
+                  {skill}
+                </span>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="mb-10">
           <h4 className="font-display font-bold text-xl text-slate-900 mb-4">About the Company</h4>
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
-              <div className="text-[10px] font-black text-slate-400 uppercase mb-1">Size</div>
-              <div className="text-sm font-bold text-slate-800">{job.companyInsights?.employees} Employees</div>
+              <div className="text-[10px] font-black text-slate-400 uppercase mb-1">Status</div>
+              <div className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                {job.companyId?.verificationStatus === 'verified' && <div className="w-2 h-2 bg-green-500 rounded-full" />}
+                {job.companyId?.verificationStatus || "Active"}
+              </div>
             </div>
             <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
               <div className="text-[10px] font-black text-slate-400 uppercase mb-1">Industry</div>
-              <div className="text-sm font-bold text-slate-800">{job.companyInsights?.industry}</div>
+              <div className="text-sm font-bold text-slate-800">{job.companyInsights?.industry || job.companyId?.industry || "Technology"}</div>
             </div>
           </div>
         </section>
 
         {/* Hiring Manager Insights */}
-        <div className="p-6 bg-slate-900 rounded-xl text-white">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-primary/50">
-              <img src={job.hiringTeam?.avatar} alt={job.hiringTeam?.name} className="w-full h-full object-cover" />
+        {job.hiringTeam && (
+          <div className="p-6 bg-slate-900 rounded-xl text-white">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-primary/50">
+                <img src={job.hiringTeam?.avatar} alt={job.hiringTeam?.name} className="w-full h-full object-cover" />
+              </div>
+              <div>
+                <div className="text-xs font-black text-primary uppercase">Hiring Manager</div>
+                <div className="font-bold">{job.hiringTeam?.name}</div>
+              </div>
             </div>
-            <div>
-              <div className="text-xs font-black text-primary uppercase">Hiring Manager</div>
-              <div className="font-bold">{job.hiringTeam?.name}</div>
-            </div>
+            <p className="text-sm text-slate-400 leading-relaxed mb-6">
+              "{job.hiringTeam?.name} is looking for a {job.title.toLowerCase()} who can bring fresh energy to the {companyName} core team."
+            </p>
+            <button className="w-full px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition-all border border-white/5 flex items-center justify-center gap-2">
+              Send Personalized Connection <ArrowRight className="w-3.5 h-3.5" />
+            </button>
           </div>
-          <p className="text-sm text-slate-400 leading-relaxed mb-6">
-            "{job.hiringTeam?.name} is looking for a {job.title.toLowerCase()} who can bring fresh energy to the {job.company} core team."
-          </p>
-          <button className="w-full px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition-all border border-white/5 flex items-center justify-center gap-2">
-            Send Personalized Connection <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
+        )}
       </div>
     </div>
   );
